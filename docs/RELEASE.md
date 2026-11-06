@@ -24,7 +24,7 @@ npm run icons
 npm run package
 ```
 
-The Web Store ZIP has `manifest.json` at its root. The unpacked ZIP has one enclosing folder for local installation. Neither includes tests or development dependencies. The source ZIP includes tests, scripts, and the dependency lockfile, but no `node_modules`.
+The `chrome-web-store` ZIP has `manifest.json` at its root. Upload it to the Web Store, or unzip it and select its folder with Chrome's **Load unpacked** command. It contains only the extension, license, and privacy policy. The source ZIP includes the development files and documentation, but no `node_modules`.
 
 ## Chrome Web Store listing draft
 
@@ -69,7 +69,7 @@ Version 1.6.0 has an expanded automated suite covering all 22 network sites on o
 Obscured-coordinate approximation and changing the exact-coordinate preference during pending requests are covered by the automated tests; those cases were not separately exercised in the live browser.
 
 - Verify the homepage, support, and privacy URLs work publicly before using them in the store listing.
-- Use `screenshots/observation.jpg` from the source package as the 1280×800 store screenshot and `icons/icon-128.png` as the store icon. The Identify screenshot is a separate demonstration at the browser's original viewport size.
+- Use [the observation screenshot](../screenshots/observation.jpg) as the 1280×800 store screenshot and `icons/icon-128.png` as the store icon. The Identify screenshot is a separate demonstration at the browser's original viewport size.
 - Upload the `chrome-web-store` ZIP, complete the listing and privacy fields, then submit for review.
 
 Store instructions: [package preparation](https://developer.chrome.com/docs/webstore/prepare), [listing assets](https://developer.chrome.com/docs/webstore/cws-dashboard-listing), [data disclosures](https://developer.chrome.com/docs/webstore/program-policies/disclosure-requirements).

@@ -23,6 +23,8 @@ Lookups send coordinates to Open-Meteo, using exact coordinates visible to your 
 
 ## Development
 
-Node.js 22.13+: `npm ci`, then `npm test`. Run `npm run package` for Web Store, unpacked, and source ZIPs in `dist/`. No runtime dependencies. See [testing](TESTING.md) and [release notes](RELEASE.md).
+Node.js 22.13+: `npm ci`, then `npm test`. No runtime dependencies.
+
+`npm run package` creates two ZIPs in `dist/`: `chrome-web-store` for upload or local installation after unzipping, and `source` for development. See [testing](docs/TESTING.md) and [release notes](docs/RELEASE.md).
 
 [Report an issue](https://github.com/armenenikolopov/inaturalist-elevation/issues) · [MIT license](LICENSE) · Independent project, not affiliated with iNaturalist.

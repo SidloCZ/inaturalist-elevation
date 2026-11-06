@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 const runtime = ["manifest.json", "shared.js", "background.js", "content.js", "styles.css",
-  "options.html", "options.css", "options.js", "icons", "PRIVACY.md", "LICENSE", "README.md", "RELEASE.md", "TESTING.md"];
-const source = [...runtime, "package.json", "package-lock.json", "scripts", "tests", ".github", ".gitignore", "SMOKE-TEST.md", "screenshots"];
+  "options.html", "options.css", "options.js", "icons", "PRIVACY.md", "LICENSE"];
+const source = [...runtime, "README.md", "package.json", "package-lock.json", "scripts", "tests", ".github", ".gitignore", "docs", "screenshots"];
 const dist = join(root, "dist");
 mkdirSync(dist, { recursive: true });
 const temporary = mkdtempSync(join(tmpdir(), "inat-elevation-package-"));
@@ -22,7 +22,7 @@ function files(directory, prefix = "") {
 
 try {
   for (const [label, includes, nested] of [
-    ["chrome-web-store", runtime, false], ["unpacked", runtime, true], ["source", source, true]
+    ["chrome-web-store", runtime, false], ["source", source, true]
   ]) {
     const stage = join(temporary, label);
     const destination = nested ? join(stage, "inaturalist-elevation") : stage;

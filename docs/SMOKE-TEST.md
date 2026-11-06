@@ -23,7 +23,7 @@ The existing 15 automated tests additionally cover obscured-coordinate approxima
 
 Actual browser captures, with no content edits:
 
-- [Normal page — 1280×800, suitable for the store listing](screenshots/observation.jpg)
-- [Identify — 1390×762](screenshots/identify.jpg)
+- [Normal page — 1280×800, suitable for the store listing](../screenshots/observation.jpg)
+- [Identify — 1390×762](../screenshots/identify.jpg)
 
 The page photograph belongs to Iván Lau, as credited on the [source observation](https://www.inaturalist.org/observations/412925717); its linked photo license is CC BY-NC 4.0. These screenshots are not extension runtime assets.

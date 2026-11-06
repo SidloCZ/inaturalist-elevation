@@ -31,4 +31,4 @@ These are incomplete live checks, not passing extension checks. No CAPTCHA or si
 
 ## Release packaging
 
-`npm run package` creates and checks separate Web Store, unpacked, and source ZIPs in `dist/`. The Web Store manifest is at the archive root. Runtime packages exclude development dependencies and tests. The source package contains the lockfile, tests, scripts, and screenshots; it excludes `node_modules`, `.git`, and temporary files.
+`npm run package` creates and checks two ZIPs in `dist/`: `chrome-web-store` for upload or local installation after unzipping, and `source` for development. The installable ZIP has `manifest.json` at its root and contains only extension files, the license, and privacy policy. The source ZIP also contains the lockfile, tests, scripts, documentation, and screenshots; it excludes `node_modules`, `.git`, and temporary files.
