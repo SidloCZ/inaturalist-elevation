@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "iNaturalist Elevation",
+  "version": "1.6.0",
+  "description": "Automatically shows terrain elevation on iNaturalist observation pages and in Identify.",
+  "homepage_url": "https://github.com/armenenikolopov/inaturalist-elevation",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.inaturalist.org/*",
+    "https://api.open-meteo.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.inaturalist.org/observations/*",
+        "https://*.inaturalist.nz/observations/*",
+        "https://*.inaturalist.ca/observations/*",
+        "https://*.biodiversity4all.org/observations/*",
+        "https://inaturalist.ala.org.au/observations/*",
+        "https://*.argentinat.org/observations/*",
+        "https://inaturalist.mma.gob.cl/observations/*",
+        "https://inaturalist.laji.fi/observations/*",
+        "https://*.inaturalist.se/observations/*",
+        "https://*.inaturalist.lu/observations/*",
+        "https://*.naturalista.uy/observations/*"
+      ],
+      "js": [
+        "shared.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "source": "https://api.inaturalist.org/v1/sites?per_page=100",
+  "checked": "2026-11-06",
+  "sites": [
+    { "name": "Global", "url": "https://www.inaturalist.org" },
+    { "name": "Mexico", "url": "https://mexico.inaturalist.org" },
+    { "name": "New Zealand", "url": "https://www.inaturalist.nz" },
+    { "name": "Canada", "url": "https://www.inaturalist.ca" },
+    { "name": "Colombia", "url": "https://colombia.inaturalist.org" },
+    { "name": "Portugal", "url": "https://www.biodiversity4all.org" },
+    { "name": "Australia", "url": "https://inaturalist.ala.org.au" },
+    { "name": "Panama", "url": "https://panama.inaturalist.org" },
+    { "name": "Ecuador", "url": "https://ecuador.inaturalist.org" },
+    { "name": "Israel", "url": "https://israel.inaturalist.org" },
+    { "name": "Argentina", "url": "https://www.argentinat.org" },
+    { "name": "Costa Rica", "url": "https://costarica.inaturalist.org" },
+    { "name": "Chile", "url": "https://inaturalist.mma.gob.cl" },
+    { "name": "Finland", "url": "https://inaturalist.laji.fi" },
+    { "name": "Sweden", "url": "https://www.inaturalist.se" },
+    { "name": "Spain", "url": "https://spain.inaturalist.org" },
+    { "name": "Greece", "url": "https://greece.inaturalist.org" },
+    { "name": "Guatemala", "url": "https://guatemala.inaturalist.org" },
+    { "name": "United Kingdom", "url": "https://uk.inaturalist.org" },
+    { "name": "Luxembourg", "url": "https://www.inaturalist.lu" },
+    { "name": "Taiwan", "url": "https://taiwan.inaturalist.org" },
+    { "name": "Uruguay", "url": "https://www.naturalista.uy" }
+  ]
+}

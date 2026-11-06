@@ -1,0 +1,83 @@
+#inat-elevation-extension {
+  align-items: baseline;
+  align-self: baseline;
+  color: inherit;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  font: inherit;
+  line-height: inherit;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+#inat-elevation-extension[aria-busy="true"],
+#inat-elevation-identify-extension[aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+#inat-elevation-extension .inat-elevation-status,
+#inat-elevation-identify-extension .inat-elevation-status {
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+
+#inat-elevation-identify-extension .inat-elevation-label {
+  font-weight: 600;
+}
+
+#inat-elevation-extension .inat-elevation-status[data-state="error"],
+#inat-elevation-identify-extension .inat-elevation-status[data-state="error"] {
+  color: #b14d28;
+  cursor: help;
+}
+
+#inat-elevation-extension .inat-elevation-info,
+#inat-elevation-identify-extension .inat-elevation-info {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  margin: 0;
+  opacity: 0.55;
+  padding: 2px;
+  position: relative;
+  top: -1px;
+}
+
+#inat-elevation-extension .inat-elevation-info:hover,
+#inat-elevation-extension .inat-elevation-info:focus-visible,
+#inat-elevation-identify-extension .inat-elevation-info:hover,
+#inat-elevation-identify-extension .inat-elevation-info:focus-visible {
+  color: #4f7700;
+  opacity: 1;
+  outline: 1px solid #74ac00;
+  outline-offset: 1px;
+}
+
+#inat-elevation-identify-extension {
+  color: inherit;
+  white-space: nowrap;
+}
+
+#inat-elevation-identify-extension .inat-elevation-status {
+  font-size: inherit;
+  font-weight: 400;
+}
+
+#inat-elevation-identify-extension .inat-elevation-info {
+  margin-left: 2px;
+}
+
+@media (max-width: 700px) {
+  #inat-elevation-extension {
+    flex-wrap: wrap;
+    margin: 6px 0 0;
+  }
+}

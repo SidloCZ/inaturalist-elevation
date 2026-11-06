@@ -1,0 +1,88 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 310px;
+}
+
+main {
+  padding: 20px;
+  max-width: 370px;
+}
+
+h1 {
+  color: #74ac00;
+  font-size: 18px;
+  margin: 0 0 18px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+
+select {
+  font: inherit;
+  min-width: 180px;
+  padding: 6px 8px;
+}
+
+#save-status {
+  color: #4f7700;
+  font-size: 12px;
+  height: 18px;
+  margin: 9px 0 0;
+}
+
+.attribution {
+  border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.attribution h2 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.attribution p {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 300px;
+}
+
+.attribution .legal-notice {
+  margin-top: 8px;
+}
+
+.attribution a {
+  color: #5d8a00;
+}
+
+.privacy p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+
+.checkbox-label {
+  align-items: start;
+  display: flex;
+  gap: 7px;
+  line-height: 1.4;
+  margin-top: 14px;
+}
+
+.checkbox-label input {
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+}
+
+.privacy a { color: #5d8a00; }
