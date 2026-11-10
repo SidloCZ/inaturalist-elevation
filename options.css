@@ -86,3 +86,9 @@ select {
 }
 
 .privacy a { color: #5d8a00; }
+
+.author {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 11px;
+  margin: 16px 0 0;
+}

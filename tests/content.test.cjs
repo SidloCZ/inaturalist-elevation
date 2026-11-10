@@ -25,10 +25,11 @@ async function until(predicate) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 }
-function setup(t, { html = PAGE, url = "https://www.inaturalist.org/observations/123", settings = {}, handler, fetch } = {}) {
+function setup(t, { html = PAGE, url = "https://www.inaturalist.org/observations/123", settings = {}, handler, fetch, locale = "en-GB" } = {}) {
   const dom = new JSDOM(html, { url, runScripts: "outside-only" });
   t.after(() => dom.window.close());
   const { window } = dom;
+  Object.defineProperty(window.navigator, "language", { value: locale, configurable: true });
   const messages = [];
   const fetches = [];
   let changed;
@@ -61,6 +62,38 @@ function setup(t, { html = PAGE, url = "https://www.inaturalist.org/observations
 }
 const value = root => root.querySelector(".inat-elevation-value").textContent;
 const complete = root => root?.querySelector(".inat-elevation-status").dataset.state === "success";
+
+test("US locale defaults to feet on both views, while manual and Automatic changes reuse cached results", async t => {
+  const app = setup(t, { locale: "es-US", html: PAGE + modal(123), settings: { allowPrivateCoordinates: false } });
+  await until(() => complete(app.root()) && complete(app.identify()));
+  assert.equal(value(app.root()), "≈ 404 ft");
+  assert.equal(value(app.identify()), "≈ 404 ft");
+  const requests = app.messages.length;
+  app.change({ elevationUnit: { newValue: "meters" } });
+  assert.equal(value(app.root()), "≈ 123 m");
+  assert.equal(value(app.identify()), "≈ 123 m");
+  for (const newValue of ["auto", undefined]) {
+    app.change({ elevationUnit: { newValue } });
+    assert.equal(value(app.root()), "≈ 404 ft");
+    assert.equal(value(app.identify()), "≈ 404 ft");
+  }
+  assert.equal(app.messages.length, requests);
+});
+
+test("returning to Automatic during a pending request uses the locale and preserves an initial manual setting", async t => {
+  const pending = deferred();
+  const app = setup(t, {
+    locale: "en-US", settings: { allowPrivateCoordinates: false, elevationUnit: "meters" },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 5, longitude: -76 } : pending.promise
+  });
+  await until(() => app.messages.some(message => message.type === "getElevation"));
+  app.change({ elevationUnit: { newValue: "auto" } });
+  pending.resolve({ ok: true, elevationMeters: 100 });
+  await until(() => complete(app.root()));
+  assert.equal(value(app.root()), "328 ft");
+  assert.equal(app.messages.filter(message => message.type === "getElevation").length, 1);
+});
 
 test("normal pages use public API coordinates rather than unscoped page coordinates; units update locally", async t => {
   const app = setup(t, { settings: { allowPrivateCoordinates: false } });

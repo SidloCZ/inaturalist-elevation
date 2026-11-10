@@ -1,6 +1,12 @@
-# Release 1.6.0
+# Release 1.7.0
 
 ## Changes
+
+- Added Automatic units as the default: feet for US browser locales, meters elsewhere. Selection happens locally without a location lookup.
+- Preserved saved manual meters/feet choices. Automatic can be selected again in options, where it shows the resolved unit.
+- Added a visible author credit for Armen Enikolopov in options and the README, and author metadata in the manifest and package.
+
+## Earlier improvements (1.6.0)
 
 - Replaced the coordinate heading and explanatory paragraphs with one checkbox: “Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy.”
 - New installations use account-visible exact coordinates by default. Checking the box uses public coordinates only. Existing saved choices are preserved.
@@ -34,13 +40,13 @@ The `chrome-web-store` ZIP has `manifest.json` at its root. Upload it to the Web
 
 **Description:**
 
-See terrain elevation automatically beside observation locations on iNaturalist, including the Identify view and supported regional sites. Choose meters or feet in Extension options; meters are the default. No API key required.
+See terrain elevation automatically beside observation locations on iNaturalist, including the Identify view and supported regional sites. Units default to Automatic: feet for a US browser locale, meters elsewhere. Choose meters or feet manually in Extension options at any time. Existing saved choices are preserved. No API key required.
 
 Observation coordinates are sent to Open-Meteo to look up elevation. New installations use exact coordinates visible to your signed-in iNaturalist account by default, including coordinates for observations with obscured/private geoprivacy. Check “Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy” in Extension options to use public coordinates only. Existing saved preferences are preserved. Obscured public locations are marked approximate. No analytics, advertising, or developer-operated server.
 
 Elevation comes from Open-Meteo and the Copernicus DEM 2021 GLO-90 dataset (~90 m resolution), under CC BY 4.0. Terrain estimates are not survey measurements. Free API access is for non-commercial use and is subject to service availability and rate limits.
 
-Independent open-source project, not affiliated with iNaturalist.
+Created by Armen Enikolopov. Independent open-source project, not affiliated with iNaturalist.
 
 **Language:** English
 
@@ -63,6 +69,8 @@ Single purpose: display terrain elevation for the observation the user is viewin
 Disclose **Location** in the dashboard because observation coordinates are transmitted. Explain that these are observation locations, not the device's live location. Observation IDs are sent only to iNaturalist; coordinates only to Open-Meteo. Do not claim that no data is transmitted. Certify only statements that agree with PRIVACY.md and the actual package.
 
 ## Before submitting
+
+Version 1.7.0 passed 75 automated tests, including US/non-US locales, saved manual units, returning to Automatic during a pending lookup, and the visible author credit. Its updated options UI has not yet had a live browser smoke test.
 
 Version 1.6.0 has an expanded automated suite covering all 22 network sites on observation and Identify pages, permission boundaries, the new default, reversed checkbox, saved preferences, settings failures, and pending lookups. See TESTING.md for the current results and live-browser limitations. The simplified options layout was also checked in Chrome after reloading version 1.6.0; an existing public-only preference correctly appeared as a checked “Hide exact coordinates…” box and was preserved. The earlier full Chrome smoke-test report covers version 1.5.0.
 

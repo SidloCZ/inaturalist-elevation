@@ -1,6 +1,6 @@
 # iNaturalist Elevation
 
-Automatically adds terrain elevation to iNaturalist observation pages and the Identify view, including supported regional sites. Meters by default, with a feet option. No API key required.
+Automatically adds terrain elevation to iNaturalist observation pages and the Identify view, including supported regional sites. Units follow your browser locale, with a manual meters/feet option. No API key required.
 
 ## Install
 
@@ -13,7 +13,7 @@ To update, replace the installed files, click **Reload** in `chrome://extensions
 
 ## Settings and privacy
 
-Open **Details → Extension options** in `chrome://extensions` to choose meters or feet.
+Open **Details → Extension options** in `chrome://extensions`. **Automatic** is the default: feet for US browser locales, meters elsewhere. This uses your browser's regional setting, not your physical location. Saved manual choices are preserved.
 
 Lookups send coordinates to Open-Meteo, using exact coordinates visible to your account by default. Check **Hide exact coordinates…** to use public coordinates only for obscured/private geoprivacy. `≈` marks obscured public locations. Existing saved preferences are preserved. No analytics or developer-operated server. [Privacy policy](PRIVACY.md).
 
@@ -26,5 +26,7 @@ Lookups send coordinates to Open-Meteo, using exact coordinates visible to your 
 Node.js 22.13+: `npm ci`, then `npm test`. No runtime dependencies.
 
 `npm run package` creates two ZIPs in `dist/`: `chrome-web-store` for upload or local installation after unzipping, and `source` for development. See [testing](docs/TESTING.md) and [release notes](docs/RELEASE.md).
+
+Created by [Armen Enikolopov](https://github.com/armenenikolopov).
 
 [Report an issue](https://github.com/armenenikolopov/inaturalist-elevation/issues) · [MIT license](LICENSE) · Independent project, not affiliated with iNaturalist.

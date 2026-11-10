@@ -4,13 +4,13 @@
   const ROOT_ID = "inat-elevation-extension";
   const IDENTIFY_ROOT_ID = "inat-elevation-identify-extension";
   const METERS_TO_FEET = 3.28084;
-  const { coordinatesFromObservation, fetchJSON } = iNaturalistElevation;
+  const { resolveElevationUnit, coordinatesFromObservation, fetchJSON } = iNaturalistElevation;
   const MAX_CACHED_OBSERVATIONS = 200;
   let currentObservationId = null;
   let currentIdentifyObservationId = null;
   let injectionTimer = null;
   let settingsGeneration = 0;
-  let preferredUnit = "meters";
+  let preferredUnit = resolveElevationUnit("auto");
   let allowPrivateCoordinates = false;
   const resultCache = new Map();
   const pendingLookups = new Map();
@@ -297,7 +297,7 @@
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== "sync") return;
       if (changes.elevationUnit) {
-        preferredUnit = changes.elevationUnit.newValue === "feet" ? "feet" : "meters";
+        preferredUnit = resolveElevationUnit(changes.elevationUnit.newValue);
       }
       const privacyChanged = changes.allowPrivateCoordinates
         && (changes.allowPrivateCoordinates.newValue === undefined
@@ -321,9 +321,9 @@
     inject();
   }
 
-  chrome.storage.sync.get({ elevationUnit: "meters", allowPrivateCoordinates: true }, settings => {
+  chrome.storage.sync.get({ elevationUnit: "auto", allowPrivateCoordinates: true }, settings => {
     if (!chrome.runtime.lastError) {
-      preferredUnit = settings.elevationUnit === "feet" ? "feet" : "meters";
+      preferredUnit = resolveElevationUnit(settings.elevationUnit);
       allowPrivateCoordinates = settings.allowPrivateCoordinates === true;
     }
     start();

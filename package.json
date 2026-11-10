@@ -1,6 +1,7 @@
 {
   "name": "inaturalist-elevation",
-  "version": "1.6.0",
+  "version": "1.7.0",
+  "author": "Armen Enikolopov",
   "private": true,
   "description": "Automatic terrain elevation for iNaturalist observations and Identify.",
   "license": "MIT",

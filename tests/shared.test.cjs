@@ -11,6 +11,25 @@ function load(fetch = async () => { throw new Error("Unexpected fetch"); }) {
   return context.iNaturalistElevation;
 }
 
+test("automatic units use the US region rather than the English language, with metric fallback", () => {
+  const { resolveElevationUnit } = load();
+  for (const locale of ["en-US", "es-US", "en-Latn-US", "en-us"]) {
+    assert.equal(resolveElevationUnit("auto", locale), "feet", locale);
+  }
+  for (const locale of ["en-GB", "en-CA", "es-CO", "fr-FR", "en", "en-GB-x-US", "", null, undefined, "not_a_locale"]) {
+    assert.equal(resolveElevationUnit("auto", locale), "meters", String(locale));
+  }
+});
+
+test("saved manual units override automatic locale selection", () => {
+  const { resolveElevationUnit } = load();
+  assert.equal(resolveElevationUnit("meters", "en-US"), "meters");
+  assert.equal(resolveElevationUnit("feet", "en-GB"), "feet");
+  assert.equal(resolveElevationUnit("feet", null), "feet");
+  assert.equal(resolveElevationUnit(undefined, "en-US"), "feet");
+  assert.equal(resolveElevationUnit("unknown", "en-GB"), "meters");
+});
+
 test("coordinates accept zero and valid bounds, but reject missing and coerced invalid values", () => {
   const { normalizeCoordinates } = load();
   for (const value of [null, undefined, "", " ", true, false, [], {}, Infinity, NaN, "nope"]) {

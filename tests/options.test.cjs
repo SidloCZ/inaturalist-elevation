@@ -4,9 +4,10 @@ const { join } = require("node:path");
 const { test } = require("node:test");
 const { JSDOM } = require("jsdom");
 
-function setup(t, stored = {}, errors = {}) {
+function setup(t, stored = {}, errors = {}, locale = "en-US") {
   const dom = new JSDOM(readFileSync(join(__dirname, "../options.html"), "utf8"), { runScripts: "outside-only" });
   t.after(() => dom.window.close());
+  Object.defineProperty(dom.window.navigator, "language", { value: locale, configurable: true });
   const writes = [];
   dom.window.chrome = {
     runtime: {},
@@ -24,7 +25,7 @@ function setup(t, stored = {}, errors = {}) {
       }
     } }
   };
-  dom.window.eval(readFileSync(join(__dirname, "../options.js"), "utf8"));
+  for (const file of ["shared.js", "options.js"]) dom.window.eval(readFileSync(join(__dirname, "..", file), "utf8"));
   const unit = dom.window.document.querySelector("select");
   const hideExact = dom.window.document.querySelector("input[type=checkbox]");
   return { dom, unit, hideExact, writes };
@@ -45,7 +46,9 @@ test("failed settings saves clearly report failure", t => {
 
 test("options default to unchecked hide-exact checkbox, and save its inverse independently of units", t => {
   const { dom, unit, hideExact, writes } = setup(t);
-  assert.equal(unit.value, "meters");
+  assert.equal(unit.value, "auto");
+  assert.equal(unit.selectedOptions[0].textContent, "Automatic (ft)");
+  assert.equal(dom.window.document.querySelector(".author").textContent, "Created by Armen Enikolopov.");
   assert.equal(hideExact.checked, false);
   assert.equal(hideExact.labels[0].textContent.trim(),
     "Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy.");
@@ -65,6 +68,25 @@ for (const allowPrivateCoordinates of [false, true]) {
   test(`existing allowPrivateCoordinates=${allowPrivateCoordinates} preference is preserved with inverted checkbox`, t => {
     const { hideExact, writes } = setup(t, { allowPrivateCoordinates });
     assert.equal(hideExact.checked, !allowPrivateCoordinates);
+    assert.deepEqual(writes, []);
+  });
+}
+
+test("Automatic shows metric units for a non-US locale and can be restored after a manual choice", t => {
+  const { dom, unit, writes } = setup(t, {}, {}, "en-CA");
+  assert.equal(unit.value, "auto");
+  assert.equal(unit.selectedOptions[0].textContent, "Automatic (m)");
+  unit.value = "feet";
+  unit.dispatchEvent(new dom.window.Event("change"));
+  unit.value = "auto";
+  unit.dispatchEvent(new dom.window.Event("change"));
+  assert.deepEqual(writes, [{ elevationUnit: "feet" }, { elevationUnit: "auto" }]);
+});
+
+for (const elevationUnit of ["meters", "feet"]) {
+  test(`saved manual ${elevationUnit} choice is preserved despite the locale default`, t => {
+    const { unit, writes } = setup(t, { elevationUnit }, {}, elevationUnit === "meters" ? "en-US" : "en-GB");
+    assert.equal(unit.value, elevationUnit);
     assert.deepEqual(writes, []);
   });
 }

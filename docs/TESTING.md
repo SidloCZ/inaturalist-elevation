@@ -2,7 +2,7 @@
 
 Run `npm ci` and `npm test` with Node.js 22.13 or newer. Tests use mocked services and a DOM environment; they need no iNaturalist account or live network connection.
 
-Latest pre-publication run: **68 tests passed**, November 6, 2026.
+Latest pre-publication run: **75 tests passed**, November 10, 2026.
 
 ## Coverage
 
@@ -12,9 +12,12 @@ Latest pre-publication run: **68 tests passed**, November 6, 2026.
 - Regional account-coordinate requests use the current site's relative JSON route and fall back to public coordinates if signed out.
 - Identify forward/back navigation, late responses, simultaneous page/modal requests, repeated observations, missing accuracy rows, and replacement of the location DOM by React.
 - Switching units while a request is pending, saved preferences, the inverted geoprivacy checkbox, and failed storage reads/writes.
+- Automatic units for US and non-US browser locales, manual overrides, returning to Automatic, and unknown locale fallback. Locale selection adds no network requests.
 - Public/obscured/private coordinates, empty and invalid values, zero coordinates/elevations, below-sea-level elevation, malformed JSON, API failures, timeouts, and disabling exact-coordinate sharing while a lookup is pending.
 
 ## Live checks — November 6, 2026
+
+The automatic-unit behavior and author credit in version 1.7.0 passed the automated suite. This version has not yet had a live Chrome or Chromium smoke test.
 
 Version 1.5.0 passed the real Chrome checks recorded in [SMOKE-TEST.md](SMOKE-TEST.md): main and Colombia observation pages, Identify navigation, meters/feet, information button, and a private observation with no public coordinates. Version 1.6.0's simplified options UI was separately verified in Chrome.
 

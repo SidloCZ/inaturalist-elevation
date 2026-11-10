@@ -1,7 +1,16 @@
 "use strict";
 
-// Loaded in the isolated content-script world and the extension service worker.
+// Shared by the content script, extension service worker, and options page.
 globalThis.iNaturalistElevation = (() => {
+  function resolveElevationUnit(preference, locale = globalThis.navigator?.language) {
+    if (preference === "feet" || preference === "meters") return preference;
+    try {
+      return new Intl.Locale(locale).region === "US" ? "feet" : "meters";
+    } catch (_error) {
+      return "meters";
+    }
+  }
+
   function coordinateNumber(value) {
     if (typeof value !== "number" && typeof value !== "string") return NaN;
     if (typeof value === "string" && !value.trim()) return NaN;
@@ -59,5 +68,5 @@ globalThis.iNaturalistElevation = (() => {
     }
   }
 
-  return Object.freeze({ normalizeCoordinates, coordinatesFromObservation, fetchJSON });
+  return Object.freeze({ resolveElevationUnit, normalizeCoordinates, coordinatesFromObservation, fetchJSON });
 })();

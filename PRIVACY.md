@@ -1,6 +1,6 @@
 # Privacy
 
-Updated November 6, 2026. Applies to iNaturalist Elevation 1.6.0.
+Updated November 10, 2026. Applies to iNaturalist Elevation 1.7.0.
 
 ## Data used
 
@@ -15,6 +15,8 @@ The checkbox is unchecked by default on new installations. Existing saved prefer
 The developer operates no server and receives no observation data. There is no analytics, advertising, sale of data, or background tracking. The extension reads only the observation identifier and coordinates needed for its elevation feature; it does not transmit photos, usernames, comments, passwords, or unrelated browsing activity.
 
 The unit and precise-coordinate preferences are saved through Chrome's synchronized extension storage and may sync to your other Chrome devices. Up to 200 elevation results are cached in page memory and discarded on reload or when the coordinate preference changes. Coordinates are not saved to persistent extension storage.
+
+Automatic units use the browser's preferred locale and require no additional network request or location permission.
 
 ## When requests occur
 

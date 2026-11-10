@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "iNaturalist Elevation",
-  "version": "1.6.0",
+  "version": "1.7.0",
+  "author": "Armen Enikolopov",
   "description": "Automatically shows terrain elevation on iNaturalist observation pages and in Identify.",
   "homepage_url": "https://github.com/armenenikolopov/inaturalist-elevation",
   "icons": {
