@@ -63,11 +63,24 @@
     });
   }
 
+  function formatNumber(value) {
+    const rounded = Math.round(value);
+    const locale = window.navigator?.language;
+    if (locale) {
+      try {
+        return rounded.toLocaleString(locale);
+      } catch (_error) {
+        // Fall back to the runtime default locale if navigator.language is invalid.
+      }
+    }
+    return rounded.toLocaleString();
+  }
+
   function formatElevation(meters) {
     if (preferredUnit === "feet") {
-      return `${Math.round(meters * METERS_TO_FEET).toLocaleString()} ft`;
+      return `${formatNumber(meters * METERS_TO_FEET)} ft`;
     }
-    return `${Math.round(meters).toLocaleString()} m`;
+    return `${formatNumber(meters)} m`;
   }
 
   function renderCachedResult(root, cached) {

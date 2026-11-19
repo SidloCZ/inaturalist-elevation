@@ -255,3 +255,23 @@ test("changing feet while a request is pending formats its eventual result in th
   assert.equal(value(app.root()), "328 ft");
   assert.equal(app.messages.filter(message => message.type === "getElevation").length, 1);
 });
+
+test("elevation numbers format using navigator.language independently of host OS locale", async t => {
+  const enApp = setup(t, {
+    locale: "en-GB",
+    settings: { allowPrivateCoordinates: false },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 5, longitude: -76 }
+      : { ok: true, elevationMeters: 1907 }
+  });
+  const deApp = setup(t, {
+    locale: "de-DE",
+    settings: { allowPrivateCoordinates: false },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 5, longitude: -76 }
+      : { ok: true, elevationMeters: 1907 }
+  });
+  await until(() => complete(enApp.root()) && complete(deApp.root()));
+  assert.equal(value(enApp.root()), "1,907 m");
+  assert.equal(value(deApp.root()), "1.907 m");
+});
