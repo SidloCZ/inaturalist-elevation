@@ -30,6 +30,16 @@ test("saved manual units override automatic locale selection", () => {
   assert.equal(resolveElevationUnit("unknown", "en-GB"), "meters");
 });
 
+test("resolveElevationSource accepts known sources and defaults unknown values to opentopodata", () => {
+  const { resolveElevationSource, DEFAULT_ELEVATION_SOURCE } = load();
+  assert.equal(DEFAULT_ELEVATION_SOURCE, "opentopodata");
+  assert.equal(resolveElevationSource("opentopodata"), "opentopodata");
+  assert.equal(resolveElevationSource("mapterhorn"), "mapterhorn");
+  assert.equal(resolveElevationSource("open-meteo"), "open-meteo");
+  assert.equal(resolveElevationSource("invalid"), "opentopodata");
+  assert.equal(resolveElevationSource(undefined), "opentopodata");
+});
+
 test("coordinates accept zero and valid bounds, but reject missing and coerced invalid values", () => {
   const { normalizeCoordinates } = load();
   for (const value of [null, undefined, "", " ", true, false, [], {}, Infinity, NaN, "nope"]) {

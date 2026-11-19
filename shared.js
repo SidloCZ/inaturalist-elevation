@@ -6,6 +6,12 @@ globalThis.iNaturalistElevation = (() => {
     "id,geojson,obscured,positional_accuracy,public_positional_accuracy,location,geoprivacy";
   const VIEWER_OBSERVATION_FIELDS =
     "id,geojson,private_geojson,obscured,positional_accuracy,public_positional_accuracy,private_positional_accuracy,location,geoprivacy";
+  const ELEVATION_SOURCES = Object.freeze(["opentopodata", "mapterhorn", "open-meteo"]);
+  const DEFAULT_ELEVATION_SOURCE = "opentopodata";
+
+  function resolveElevationSource(source) {
+    return ELEVATION_SOURCES.includes(source) ? source : DEFAULT_ELEVATION_SOURCE;
+  }
 
   function resolveElevationUnit(preference, locale = globalThis.navigator?.language) {
     if (preference === "feet" || preference === "meters") return preference;
@@ -90,6 +96,9 @@ globalThis.iNaturalistElevation = (() => {
   return Object.freeze({
     PUBLIC_OBSERVATION_FIELDS,
     VIEWER_OBSERVATION_FIELDS,
+    ELEVATION_SOURCES,
+    DEFAULT_ELEVATION_SOURCE,
+    resolveElevationSource,
     resolveElevationUnit,
     positiveNumber,
     normalizeCoordinates,

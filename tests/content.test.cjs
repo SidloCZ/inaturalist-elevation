@@ -342,3 +342,19 @@ test("intercepted private coordinates are ignored when allowPrivateCoordinates i
   assert.equal(app.fetches.length, 0);
   assert.equal(app.messages.some(message => message.type === "getPublicObservationCoordinates"), false);
 });
+
+test("changing elevationSource re-runs active lookup with the new provider", async t => {
+  const app = setup(t, {
+    settings: { allowPrivateCoordinates: false, elevationSource: "opentopodata" },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 5, longitude: -76 }
+      : { ok: true, elevationMeters: message.source === "mapterhorn" ? 512 : 500 }
+  });
+  await until(() => complete(app.root()));
+  assert.equal(value(app.root()), "500 m");
+  assert.equal(app.messages.find(message => message.type === "getElevation").source, "opentopodata");
+
+  app.change({ elevationSource: { newValue: "mapterhorn" } });
+  await until(() => complete(app.root()) && value(app.root()) === "512 m");
+  assert.equal(app.messages.filter(message => message.type === "getElevation").at(-1).source, "mapterhorn");
+});

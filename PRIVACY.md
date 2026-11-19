@@ -4,11 +4,11 @@ Updated November 10, 2026. Applies to iNaturalist Elevation 1.7.0.
 
 ## Data used
 
-For an observation page or an observation opened in Identify, the extension sends latitude and longitude to Open-Meteo to retrieve terrain elevation. Whenever possible, it reuses coordinates already loaded by the iNaturalist page from iNaturalist's API without making extra iNaturalist requests.
+For an observation page or an observation opened in Identify, the extension looks up terrain elevation using your selected elevation source (OpenTopoData by default, or Mapterhorn tiles / Open-Meteo in Extension options). Whenever possible, it reuses coordinates already loaded by the iNaturalist page from iNaturalist's API without making extra iNaturalist requests.
 
-On a new installation, the extension uses exact coordinates visible to your iNaturalist account when available, including coordinates for observations with obscured/private geoprivacy. If account-visible coordinates were not already loaded by the page, it requests a short-lived API token from the current iNaturalist site (`/users/api_token`) using your signed-in session and queries iNaturalist API v2 with minimal coordinate fields. Authentication cookies are used only by the same-origin token request and are never sent to Open-Meteo or the developer.
+On a new installation, the extension uses exact coordinates visible to your iNaturalist account when available, including coordinates for observations with obscured/private geoprivacy. If account-visible coordinates were not already loaded by the page, it requests a short-lived API token from the current iNaturalist site (`/users/api_token`) using your signed-in session and queries iNaturalist API v2 with minimal coordinate fields. Authentication cookies are used only by the same-origin token request and are never sent to external elevation services or the developer.
 
-To use public coordinates only, check **Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy** in Extension options. When checked, any private coordinates are ignored and fallback lookups use only the public iNaturalist API v2. Obscured public coordinates may be shifted away from the true location; the result is marked `≈`. Observations with no available coordinates show “unavailable.”
+To use public coordinates only, check **Hide exact coordinates from elevation APIs for observations with obscured/private geoprivacy** in Extension options. When checked, any private coordinates are ignored and fallback lookups use only the public iNaturalist API v2. If you choose **Mapterhorn tiles**, the extension fetches regional terrain tiles (`z=14` or `z=12`) and decodes the elevation locally in your browser without transmitting exact coordinates. Obscured public coordinates may be shifted away from the true location; the result is marked `≈`. Observations with no available coordinates show “unavailable.”
 
 The checkbox is unchecked by default on new installations. Existing saved preferences are preserved when updating. You can change this preference at any time; requests already sent cannot be recalled.
 
@@ -27,8 +27,10 @@ Lookups occur automatically for displayed observations, including when you move 
 ## External services
 
 - [iNaturalist](https://www.inaturalist.org/pages/privacy) — observation coordinates.
-- [Open-Meteo Elevation API](https://open-meteo.com/en/docs/elevation-api) — terrain elevation lookup.
+- [OpenTopoData](https://www.opentopodata.org/) — default multi-dataset terrain elevation lookup (with automatic fallback to Mapterhorn).
+- [Mapterhorn](https://mapterhorn.com/privacy-policy/) — regional Terrarium terrain tiles decoded locally in your browser.
+- [Open-Meteo Elevation API](https://open-meteo.com/en/docs/elevation-api) — optional terrain elevation lookup.
 
-These services receive your IP address and process requests under their own policies. Open-Meteo's [privacy policy](https://open-meteo.com/en/terms#privacy) says its API logs may contain coordinates and are deleted after 90 days. The extension omits cookies and page referrers from these external API requests.
+These services receive your IP address and process requests under their own policies. Open-Meteo's [privacy policy](https://open-meteo.com/en/terms#privacy) says its API logs may contain coordinates and are deleted after 90 days. The extension omits cookies and page referrers from external requests.
 
 Data is used and transferred solely to provide the elevation feature, consistent with the Chrome Web Store User Data Policy, including its Limited Use requirements. Contact the maintainer through [GitHub Issues](https://github.com/armenenikolopov/inaturalist-elevation/issues); do not include private coordinates in public reports.

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
-const runtime = ["manifest.json", "shared.js", "page-interceptor.js", "background.js", "content.js", "styles.css",
+const runtime = ["manifest.json", "shared.js", "elevation-providers.js", "page-interceptor.js", "background.js", "content.js", "styles.css",
   "options.html", "options.css", "options.js", "icons", "PRIVACY.md", "LICENSE"];
 const source = [...runtime, "README.md", "package.json", "package-lock.json", "scripts", "tests", ".github", ".gitignore", "docs", "screenshots"];
 const dist = join(root, "dist");

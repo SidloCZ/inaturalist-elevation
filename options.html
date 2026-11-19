@@ -15,29 +15,39 @@
         <option value="meters">Meters (m)</option>
         <option value="feet">Feet (ft)</option>
       </select>
+
+      <label class="field-label" for="elevation-source">Elevation source</label>
+      <select id="elevation-source">
+        <option value="opentopodata">OpenTopoData (10–30 m + bathymetry, Mapterhorn fallback)</option>
+        <option value="mapterhorn">Mapterhorn tiles (1–30 m LiDAR/Copernicus, local decode)</option>
+        <option value="open-meteo">Open-Meteo (Copernicus 90 m)</option>
+      </select>
       <p id="save-status" role="status" aria-live="polite"></p>
 
       <div class="privacy">
         <label class="checkbox-label" for="hide-exact-coordinates">
           <input type="checkbox" id="hide-exact-coordinates">
-          Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy.
+          Hide exact coordinates from elevation APIs for observations with obscured/private geoprivacy.
         </label>
+        <p class="privacy-note">Mapterhorn decodes map tiles locally in your browser without sending exact coordinates.</p>
         <p><a href="https://github.com/armenenikolopov/inaturalist-elevation/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy policy</a></p>
       </div>
 
       <section class="attribution" aria-labelledby="data-source-heading">
         <h2 id="data-source-heading">Data source and licensing</h2>
         <p>
-          Elevation data provided by
-          <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer">Open-Meteo</a>,
-          based on Copernicus WorldDEM™-90. Open-Meteo API data is used under
+          <a href="https://www.opentopodata.org/" target="_blank" rel="noopener noreferrer">OpenTopoData</a>
+          queries USGS NED (10 m), EU-DEM (25 m), LINZ NZ (8 m), and Mapzen (~30 m + bathymetry), with automatic fallback to Mapterhorn.
+        </p>
+        <p class="legal-notice">
+          <a href="https://mapterhorn.com/attribution" target="_blank" rel="noopener noreferrer">© Mapterhorn</a>
+          terrain tiles combine Copernicus GLO-30 (~30 m) with national open LiDAR models (1–10 m).
+        </p>
+        <p class="legal-notice">
+          <a href="https://open-meteo.com/en/docs/elevation-api" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+          provides Copernicus WorldDEM™-90 under
           <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>.
-        </p>
-        <p class="legal-notice">
-          © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
-        </p>
-        <p class="legal-notice">
-          The organizations responsible for the Copernicus programme accept no liability for use of Copernicus WorldDEM™-90.
+          © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organizations responsible for the Copernicus programme accept no liability for use of Copernicus WorldDEM™-90.
         </p>
       </section>
       <p class="author">Created by Armen Enikolopov.</p>

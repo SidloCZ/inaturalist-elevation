@@ -41,7 +41,9 @@ test("manifest, package version, entry points, and declared PNG dimensions agree
   assert.equal(manifest.manifest_version, 3);
   assert.ok(manifest.description.length <= 132);
   assert.deepEqual(manifest.permissions, ["storage"]);
-  const entries = [manifest.background.service_worker, manifest.options_ui.page,
+  assert.ok(manifest.host_permissions.includes("https://api.opentopodata.org/*"));
+  assert.ok(manifest.host_permissions.includes("https://tiles.mapterhorn.com/*"));
+  const entries = [manifest.background.service_worker, "elevation-providers.js", manifest.options_ui.page,
     ...manifest.content_scripts.flatMap(script => [...script.js, ...(script.css || [])])];
   for (const name of entries) assert.ok(existsSync(join(root, name)), name);
   const mainWorldScript = manifest.content_scripts.find(script => script.world === "MAIN");

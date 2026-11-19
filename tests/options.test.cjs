@@ -26,9 +26,10 @@ function setup(t, stored = {}, errors = {}, locale = "en-US") {
     } }
   };
   for (const file of ["shared.js", "options.js"]) dom.window.eval(readFileSync(join(__dirname, "..", file), "utf8"));
-  const unit = dom.window.document.querySelector("select");
+  const unit = dom.window.document.getElementById("elevation-unit");
+  const source = dom.window.document.getElementById("elevation-source");
   const hideExact = dom.window.document.querySelector("input[type=checkbox]");
-  return { dom, unit, hideExact, writes };
+  return { dom, unit, source, hideExact, writes };
 }
 
 test("failed settings reads display an error instead of reporting success or writing defaults", t => {
@@ -44,24 +45,36 @@ test("failed settings saves clearly report failure", t => {
   assert.equal(dom.window.document.getElementById("save-status").textContent, "Could not save.");
 });
 
-test("options default to unchecked hide-exact checkbox, and save its inverse independently of units", t => {
-  const { dom, unit, hideExact, writes } = setup(t);
+test("options default to unchecked hide-exact checkbox, opentopodata source, and save settings independently", t => {
+  const { dom, unit, source, hideExact, writes } = setup(t);
   assert.equal(unit.value, "auto");
+  assert.equal(source.value, "opentopodata");
   assert.equal(unit.selectedOptions[0].textContent, "Automatic (ft)");
   assert.equal(dom.window.document.querySelector(".author").textContent, "Created by Armen Enikolopov.");
   assert.equal(hideExact.checked, false);
   assert.equal(hideExact.labels[0].textContent.trim(),
-    "Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy.");
+    "Hide exact coordinates from elevation APIs for observations with obscured/private geoprivacy.");
   unit.value = "feet";
   unit.dispatchEvent(new dom.window.Event("change"));
+  source.value = "mapterhorn";
+  source.dispatchEvent(new dom.window.Event("change"));
   hideExact.checked = true;
   hideExact.dispatchEvent(new dom.window.Event("change"));
   hideExact.checked = false;
   hideExact.dispatchEvent(new dom.window.Event("change"));
   assert.deepEqual(writes, [
-    { elevationUnit: "feet" }, { allowPrivateCoordinates: false }, { allowPrivateCoordinates: true }
+    { elevationUnit: "feet" },
+    { elevationSource: "mapterhorn" },
+    { allowPrivateCoordinates: false },
+    { allowPrivateCoordinates: true }
   ]);
   assert.equal(dom.window.document.getElementById("save-status").textContent, "Saved");
+});
+
+test("invalid stored elevationSource falls back cleanly to default", t => {
+  const { source, writes } = setup(t, { elevationSource: "bogus" });
+  assert.equal(source.value, "opentopodata");
+  assert.deepEqual(writes, []);
 });
 
 for (const allowPrivateCoordinates of [false, true]) {

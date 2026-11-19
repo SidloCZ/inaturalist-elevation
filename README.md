@@ -15,11 +15,15 @@ To update, replace the installed files, click **Reload** in `chrome://extensions
 
 Open **Details → Extension options** in `chrome://extensions`. **Automatic** is the default: feet for US browser locales, meters elsewhere. This uses your browser's regional setting, not your physical location. Saved manual choices are preserved.
 
-Lookups send coordinates to Open-Meteo, using exact coordinates visible to your account by default. Check **Hide exact coordinates…** to use public coordinates only for obscured/private geoprivacy. `≈` marks obscured public locations. Existing saved preferences are preserved. No analytics or developer-operated server. [Privacy policy](PRIVACY.md).
+Lookups default to **OpenTopoData** (with automatic fallback to Mapterhorn tiles) and can be switched to **Mapterhorn tiles** (decoded locally in your browser without sending exact coordinates) or **Open-Meteo** in Extension options. By default, account-visible exact coordinates are used when available; check **Hide exact coordinates…** to use public coordinates only for obscured/private geoprivacy. `≈` marks obscured public locations. Existing saved preferences are preserved. No analytics or developer-operated server. [Privacy policy](PRIVACY.md).
 
 ## Data
 
-[Open-Meteo](https://open-meteo.com/en/docs/elevation-api), using Copernicus DEM 2021 GLO-90 (~90 m resolution), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Values estimate terrain elevation; obscured coordinates can yield very different elevations. The free API is for [non-commercial use](https://open-meteo.com/en/terms).
+- **[OpenTopoData](https://www.opentopodata.org/)** (default): queries `ned10m` (USGS 10 m), `eudem25m` (EU-DEM 25 m), `nzdem8m` (LINZ 8 m), and `mapzen` (~30 m + bathymetry).
+- **[Mapterhorn](https://mapterhorn.com/attribution)**: WebP Terrarium terrain tiles combining Copernicus GLO-30 (~30 m) and national open LiDAR DTMs (1–10 m), decoded locally in the browser (`© Mapterhorn`).
+- **[Open-Meteo](https://open-meteo.com/en/docs/elevation-api)**: Copernicus DEM 2021 GLO-90 (~90 m resolution), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (non-commercial free API).
+
+Values estimate terrain elevation; obscured coordinates can yield very different elevations.
 
 ## Development
 

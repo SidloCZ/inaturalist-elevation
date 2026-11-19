@@ -1,31 +1,36 @@
 "use strict";
 
-importScripts("shared.js");
+if (typeof importScripts === "function") {
+  importScripts("shared.js", "elevation-providers.js");
+}
 const {
   PUBLIC_OBSERVATION_FIELDS,
+  DEFAULT_ELEVATION_SOURCE,
+  resolveElevationSource,
   normalizeCoordinates,
   coordinatesFromObservation,
   fetchJSON
 } = iNaturalistElevation;
+const { createElevationClient } = iNaturalistElevationProviders;
 const REQUEST_OPTIONS = {
   credentials: "omit",
   referrerPolicy: "no-referrer",
   headers: { Accept: "application/json" }
 };
+const elevationClient = createElevationClient(globalThis.__elevationClientOptions);
 
-async function fetchElevation(latitude, longitude) {
+async function fetchElevation(latitude, longitude, options = {}) {
   const coordinates = normalizeCoordinates(latitude, longitude);
   if (!coordinates) throw new Error("The observation did not provide valid coordinates.");
-  const url = new URL("https://api.open-meteo.com/v1/elevation");
-  url.searchParams.set("latitude", String(coordinates.latitude));
-  url.searchParams.set("longitude", String(coordinates.longitude));
-  const data = await fetchJSON(url, REQUEST_OPTIONS);
-  const elevationMeters = Array.isArray(data?.elevation) ? data.elevation[0] : undefined;
-  if (typeof elevationMeters !== "number" || !Number.isFinite(elevationMeters)) {
+  const source = resolveElevationSource(options.source || DEFAULT_ELEVATION_SOURCE);
+  const [result] = await elevationClient.lookupPoints([coordinates], {
+    source,
+    allowFallback: options.allowFallback
+  });
+  if (!result || typeof result.elevationMeters !== "number" || !Number.isFinite(result.elevationMeters)) {
     throw new Error("No terrain elevation was available for these coordinates.");
   }
-
-  return { elevationMeters };
+  return result;
 }
 
 async function fetchPublicObservationCoordinates(observationId) {
@@ -46,7 +51,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   let task;
   if (message.type === "getElevation") {
-    task = fetchElevation(message.latitude, message.longitude);
+    task = fetchElevation(message.latitude, message.longitude, {
+      source: message.source,
+      allowFallback: message.allowFallback
+    });
   } else if (message.type === "getPublicObservationCoordinates") {
     task = fetchPublicObservationCoordinates(message.observationId);
   } else if (message.type === "openOptions") {

@@ -26,8 +26,13 @@ label {
   margin-bottom: 7px;
 }
 
+.field-label {
+  margin-top: 14px;
+}
+
 select {
   font: inherit;
+  max-width: 100%;
   min-width: 180px;
   padding: 6px 8px;
 }
@@ -70,6 +75,11 @@ select {
   font-size: 12px;
   line-height: 1.5;
   margin: 8px 0;
+}
+
+.privacy .privacy-note {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 11px;
 }
 
 .checkbox-label {

@@ -6,6 +6,8 @@
   const METERS_TO_FEET = 3.28084;
   const {
     VIEWER_OBSERVATION_FIELDS,
+    DEFAULT_ELEVATION_SOURCE,
+    resolveElevationSource,
     resolveElevationUnit,
     coordinatesFromObservation,
     fetchJSON
@@ -18,6 +20,7 @@
   let settingsGeneration = 0;
   let preferredUnit = resolveElevationUnit("auto");
   let allowPrivateCoordinates = false;
+  let elevationSource = DEFAULT_ELEVATION_SOURCE;
   let viewerApiToken = null;
   let pendingTokenRequest = null;
   const resultCache = new Map();
@@ -186,6 +189,7 @@
     if (pendingLookups.has(observationId)) return pendingLookups.get(observationId);
     const generation = settingsGeneration;
     const allowPrivate = allowPrivateCoordinates;
+    const source = elevationSource;
     const task = (async () => {
       const coordinates = await resolveCoordinates(observationId, allowPrivate);
       // Never start a precise-location lookup after the user disables that setting.
@@ -193,7 +197,8 @@
       const result = await sendMessage({
         type: "getElevation",
         latitude: coordinates.latitude,
-        longitude: coordinates.longitude
+        longitude: coordinates.longitude,
+        source
       });
 
       const privacyNote = coordinates.approximate
@@ -398,6 +403,14 @@
       if (privacyChanged) {
         allowPrivateCoordinates = changes.allowPrivateCoordinates.newValue === undefined
           || changes.allowPrivateCoordinates.newValue === true;
+      }
+      const sourceChanged = Boolean(changes.elevationSource)
+        && resolveElevationSource(changes.elevationSource.newValue) !== elevationSource;
+      if (sourceChanged) {
+        elevationSource = resolveElevationSource(changes.elevationSource.newValue);
+      }
+      const invalidateCache = privacyChanged || sourceChanged;
+      if (invalidateCache) {
         settingsGeneration += 1;
         resultCache.clear();
         pendingLookups.clear();
@@ -406,7 +419,7 @@
         const root = document.getElementById(id);
         if (!root) continue;
         const observationId = root.dataset.observationId;
-        if (privacyChanged) lookUpElevation(root, observationId);
+        if (invalidateCache) lookUpElevation(root, observationId);
         else if (resultCache.has(observationId)) renderCachedResult(root, resultCache.get(observationId));
       }
     });
@@ -421,10 +434,15 @@
   });
   window.dispatchEvent(new window.CustomEvent("inat-elevation:ready"));
 
-  chrome.storage.sync.get({ elevationUnit: "auto", allowPrivateCoordinates: true }, settings => {
+  chrome.storage.sync.get({
+    elevationUnit: "auto",
+    allowPrivateCoordinates: true,
+    elevationSource: DEFAULT_ELEVATION_SOURCE
+  }, settings => {
     if (!chrome.runtime.lastError) {
       preferredUnit = resolveElevationUnit(settings.elevationUnit);
       allowPrivateCoordinates = settings.allowPrivateCoordinates === true;
+      elevationSource = resolveElevationSource(settings.elevationSource);
     }
     start();
   });
