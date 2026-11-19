@@ -1,8 +1,18 @@
 "use strict";
 
-const { DEFAULT_ELEVATION_SOURCE, resolveElevationSource, resolveElevationUnit } = iNaturalistElevation;
+const {
+  DEFAULT_ELEVATION_SOURCE,
+  DEFAULT_UNCERTAINTY_MODE,
+  DEFAULT_ACCURACY_THRESHOLD,
+  resolveElevationSource,
+  resolveUncertaintyMode,
+  resolveAccuracyThreshold,
+  resolveElevationUnit
+} = iNaturalistElevation;
 const unitSelect = document.getElementById("elevation-unit");
 const sourceSelect = document.getElementById("elevation-source");
+const uncertaintyModeSelect = document.getElementById("uncertainty-mode");
+const thresholdSelect = document.getElementById("accuracy-threshold");
 const hideExactCoordinates = document.getElementById("hide-exact-coordinates");
 const saveStatus = document.getElementById("save-status");
 let statusTimer;
@@ -13,7 +23,9 @@ unitSelect.querySelector('[value="auto"]').textContent = `Automatic (${automatic
 chrome.storage.sync.get({
   elevationUnit: "auto",
   allowPrivateCoordinates: true,
-  elevationSource: DEFAULT_ELEVATION_SOURCE
+  elevationSource: DEFAULT_ELEVATION_SOURCE,
+  uncertaintyMode: DEFAULT_UNCERTAINTY_MODE,
+  accuracyThresholdMeters: DEFAULT_ACCURACY_THRESHOLD
 }, settings => {
   if (chrome.runtime.lastError) {
     saveStatus.textContent = "Could not load settings. Reopen options to try again.";
@@ -21,6 +33,10 @@ chrome.storage.sync.get({
   }
   unitSelect.value = ["auto", "meters", "feet"].includes(settings.elevationUnit) ? settings.elevationUnit : "auto";
   sourceSelect.value = resolveElevationSource(settings.elevationSource);
+  uncertaintyModeSelect.value = resolveUncertaintyMode(settings.uncertaintyMode);
+  const resolvedThreshold = String(resolveAccuracyThreshold(settings.accuracyThresholdMeters));
+  const hasOption = Array.from(thresholdSelect.options).some(option => option.value === resolvedThreshold);
+  thresholdSelect.value = hasOption ? resolvedThreshold : String(DEFAULT_ACCURACY_THRESHOLD);
   hideExactCoordinates.checked = settings.allowPrivateCoordinates !== true;
 });
 
@@ -40,6 +56,14 @@ unitSelect.addEventListener("change", () => {
 
 sourceSelect.addEventListener("change", () => {
   saveSetting({ elevationSource: resolveElevationSource(sourceSelect.value) });
+});
+
+uncertaintyModeSelect.addEventListener("change", () => {
+  saveSetting({ uncertaintyMode: resolveUncertaintyMode(uncertaintyModeSelect.value) });
+});
+
+thresholdSelect.addEventListener("change", () => {
+  saveSetting({ accuracyThresholdMeters: resolveAccuracyThreshold(thresholdSelect.value) });
 });
 
 hideExactCoordinates.addEventListener("change", () => {

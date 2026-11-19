@@ -40,6 +40,45 @@ test("resolveElevationSource accepts known sources and defaults unknown values t
   assert.equal(resolveElevationSource(undefined), "opentopodata");
 });
 
+test("uncertainty mode and accuracy threshold resolvers validate and preserve zero", () => {
+  const {
+    DEFAULT_UNCERTAINTY_MODE,
+    DEFAULT_ACCURACY_THRESHOLD,
+    resolveUncertaintyMode,
+    resolveAccuracyThreshold
+  } = load();
+  assert.equal(DEFAULT_UNCERTAINTY_MODE, "range");
+  assert.equal(DEFAULT_ACCURACY_THRESHOLD, 100);
+  assert.equal(resolveUncertaintyMode("range"), "range");
+  assert.equal(resolveUncertaintyMode("mark"), "mark");
+  assert.equal(resolveUncertaintyMode("hide"), "hide");
+  assert.equal(resolveUncertaintyMode("other"), "range");
+  assert.equal(resolveAccuracyThreshold(0), 0);
+  assert.equal(resolveAccuracyThreshold("0"), 0);
+  assert.equal(resolveAccuracyThreshold(250), 250);
+  assert.equal(resolveAccuracyThreshold(-5), 100);
+  assert.equal(resolveAccuracyThreshold(""), 100);
+  assert.equal(resolveAccuracyThreshold(undefined), 100);
+});
+
+test("sampleCircleCoordinates generates center plus valid wrapped ring points", () => {
+  const { sampleCircleCoordinates } = load();
+  assert.deepEqual(Array.from(sampleCircleCoordinates(91, 0, 500)), []);
+  const noRadius = sampleCircleCoordinates(10, 20, 0);
+  assert.equal(noRadius.length, 1);
+  assert.equal(noRadius[0].latitude, 10);
+
+  const ring = sampleCircleCoordinates(0, 179.99, 5000, 8);
+  assert.equal(ring.length, 9);
+  assert.equal(ring[0].latitude, 0);
+  assert.equal(ring[0].longitude, 179.99);
+  assert.ok(ring.some(pt => pt.longitude < 0 && pt.longitude >= -180), "Wrapped across antimeridian");
+  for (const pt of ring) {
+    assert.ok(pt.latitude >= -90 && pt.latitude <= 90);
+    assert.ok(pt.longitude >= -180 && pt.longitude <= 180);
+  }
+});
+
 test("coordinates accept zero and valid bounds, but reject missing and coerced invalid values", () => {
   const { normalizeCoordinates } = load();
   for (const value of [null, undefined, "", " ", true, false, [], {}, Infinity, NaN, "nope"]) {

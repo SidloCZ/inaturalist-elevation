@@ -22,6 +22,23 @@
         <option value="mapterhorn">Mapterhorn tiles (1–30 m LiDAR/Copernicus, local decode)</option>
         <option value="open-meteo">Open-Meteo (Copernicus 90 m)</option>
       </select>
+
+      <label class="field-label" for="uncertainty-mode">Location uncertainty</label>
+      <select id="uncertainty-mode">
+        <option value="range">Show elevation range</option>
+        <option value="mark">Mark approximate (≈)</option>
+        <option value="hide">Hide ("uncertain")</option>
+      </select>
+
+      <label class="field-label" for="accuracy-threshold">Uncertainty threshold</label>
+      <select id="accuracy-threshold">
+        <option value="50">50 m</option>
+        <option value="100">100 m</option>
+        <option value="250">250 m</option>
+        <option value="500">500 m</option>
+        <option value="1000">1,000 m</option>
+        <option value="0">Off</option>
+      </select>
       <p id="save-status" role="status" aria-live="polite"></p>
 
       <div class="privacy">

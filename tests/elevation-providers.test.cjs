@@ -198,3 +198,53 @@ test("Open-Meteo provider supports single and multi-point queries", async () => 
   assert.equal(results[0].provider, "open-meteo");
   assert.equal(results[0].dataset, "copernicus-glo90");
 });
+
+test("lookupPoint with sampleRadiusMeters samples 9 points in one batch on OpenTopoData and 17 on Mapterhorn", async () => {
+  const topoUrls = [];
+  const topo = loadProviders({
+    fetch: async url => {
+      topoUrls.push(String(url));
+      const locCount = new URL(url).searchParams.get("locations").split("|").length;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: "OK",
+          results: Array.from({ length: locCount }, (_, idx) => ({
+            dataset: "ned10m",
+            elevation: 400 + idx * 35
+          }))
+        })
+      };
+    }
+  });
+
+  const topoRes = await topo.client.lookupPoint(
+    { latitude: 37.77, longitude: -122.41 },
+    { source: "opentopodata", sampleRadiusMeters: 500 }
+  );
+  assert.equal(topoUrls.length, 1);
+  assert.equal(new URL(topoUrls[0]).searchParams.get("locations").split("|").length, 9);
+  assert.equal(topoRes.elevationMeters, 400);
+  assert.equal(topoRes.minElevationMeters, 400);
+  assert.equal(topoRes.maxElevationMeters, 400 + 8 * 35);
+
+  const mapterhorn = loadProviders({
+    fetch: async url => {
+      if (String(url).includes("/14/")) return { ok: false, status: 404 };
+      return {
+        ok: true,
+        status: 200,
+        tileData: makeTile(512, 512, (x, y) => 100 + Math.floor((x + y) / 10))
+      };
+    },
+    decodeImage: async res => res.tileData
+  });
+  const mapRes = await mapterhorn.client.lookupPoint(
+    { latitude: 46.6, longitude: 7.8 },
+    { source: "mapterhorn", sampleRadiusMeters: 1500 }
+  );
+  assert.ok(mapRes.maxElevationMeters > mapRes.minElevationMeters);
+  assert.ok(mapRes.elevationMeters >= mapRes.minElevationMeters);
+  assert.ok(mapRes.elevationMeters <= mapRes.maxElevationMeters);
+});

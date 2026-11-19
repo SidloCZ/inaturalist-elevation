@@ -28,8 +28,10 @@ function setup(t, stored = {}, errors = {}, locale = "en-US") {
   for (const file of ["shared.js", "options.js"]) dom.window.eval(readFileSync(join(__dirname, "..", file), "utf8"));
   const unit = dom.window.document.getElementById("elevation-unit");
   const source = dom.window.document.getElementById("elevation-source");
+  const uncertaintyMode = dom.window.document.getElementById("uncertainty-mode");
+  const accuracyThreshold = dom.window.document.getElementById("accuracy-threshold");
   const hideExact = dom.window.document.querySelector("input[type=checkbox]");
-  return { dom, unit, source, hideExact, writes };
+  return { dom, unit, source, uncertaintyMode, accuracyThreshold, hideExact, writes };
 }
 
 test("failed settings reads display an error instead of reporting success or writing defaults", t => {
@@ -103,3 +105,21 @@ for (const elevationUnit of ["meters", "feet"]) {
     assert.deepEqual(writes, []);
   });
 }
+
+test("uncertainty mode and accuracy threshold default cleanly and save numeric threshold including Off (0)", t => {
+  const { dom, uncertaintyMode, accuracyThreshold, writes } = setup(t);
+  assert.equal(uncertaintyMode.value, "range");
+  assert.equal(accuracyThreshold.value, "100");
+  uncertaintyMode.value = "hide";
+  uncertaintyMode.dispatchEvent(new dom.window.Event("change"));
+  accuracyThreshold.value = "0";
+  accuracyThreshold.dispatchEvent(new dom.window.Event("change"));
+  assert.deepEqual(writes, [
+    { uncertaintyMode: "hide" },
+    { accuracyThresholdMeters: 0 }
+  ]);
+
+  const reloaded = setup(t, { uncertaintyMode: "mark", accuracyThresholdMeters: 0 });
+  assert.equal(reloaded.uncertaintyMode.value, "mark");
+  assert.equal(reloaded.accuracyThreshold.value, "0");
+});

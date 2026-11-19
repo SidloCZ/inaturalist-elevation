@@ -358,3 +358,49 @@ test("changing elevationSource re-runs active lookup with the new provider", asy
   await until(() => complete(app.root()) && value(app.root()) === "512 m");
   assert.equal(app.messages.filter(message => message.type === "getElevation").at(-1).source, "mapterhorn");
 });
+
+test("uncertain coordinates show range, collapse flat terrain, mark approximate, or hide based on settings", async t => {
+  const rangeApp = setup(t, {
+    locale: "en-US",
+    settings: {
+      allowPrivateCoordinates: false,
+      uncertaintyMode: "range",
+      accuracyThresholdMeters: 100
+    },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 46, longitude: 8, approximate: false, accuracyMeters: 500, source: "public" }
+      : message.sampleRadiusMeters
+        ? { ok: true, elevationMeters: 500, minElevationMeters: 420, maxElevationMeters: 680 }
+        : { ok: true, elevationMeters: 500 }
+  });
+  await until(() => complete(rangeApp.root()));
+  assert.equal(rangeApp.messages.find(m => m.type === "getElevation").sampleRadiusMeters, 500);
+  assert.equal(value(rangeApp.root()), "1,378–2,231 ft");
+
+  rangeApp.change({ elevationUnit: { newValue: "meters" } });
+  assert.equal(value(rangeApp.root()), "420–680 m");
+
+  rangeApp.change({ uncertaintyMode: { newValue: "hide" } });
+  await until(() => rangeApp.root()?.querySelector(".inat-elevation-status").dataset.state === "uncertain");
+  assert.equal(value(rangeApp.root()), "uncertain");
+  const getElevationCountBeforeHide = rangeApp.messages.filter(m => m.type === "getElevation").length;
+  assert.equal(getElevationCountBeforeHide, 1);
+
+  rangeApp.change({ uncertaintyMode: { newValue: "mark" } });
+  await until(() => complete(rangeApp.root()));
+  assert.equal(value(rangeApp.root()), "≈ 500 m");
+  assert.equal(rangeApp.messages.filter(m => m.type === "getElevation").at(-1).sampleRadiusMeters, undefined);
+
+  const flatApp = setup(t, {
+    locale: "en-GB",
+    settings: { allowPrivateCoordinates: false, uncertaintyMode: "range", accuracyThresholdMeters: 100 },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 46, longitude: 8, approximate: false, accuracyMeters: 500, source: "public" }
+      : { ok: true, elevationMeters: 102, minElevationMeters: 100, maxElevationMeters: 106 }
+  });
+  await until(() => complete(flatApp.root()));
+  assert.equal(value(flatApp.root()), "≈ 102 m");
+
+  flatApp.change({ accuracyThresholdMeters: { newValue: 0 } });
+  await until(() => complete(flatApp.root()) && value(flatApp.root()) === "102 m");
+});

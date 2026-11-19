@@ -7,6 +7,7 @@ const {
   PUBLIC_OBSERVATION_FIELDS,
   DEFAULT_ELEVATION_SOURCE,
   resolveElevationSource,
+  positiveNumber,
   normalizeCoordinates,
   coordinatesFromObservation,
   fetchJSON
@@ -23,9 +24,11 @@ async function fetchElevation(latitude, longitude, options = {}) {
   const coordinates = normalizeCoordinates(latitude, longitude);
   if (!coordinates) throw new Error("The observation did not provide valid coordinates.");
   const source = resolveElevationSource(options.source || DEFAULT_ELEVATION_SOURCE);
-  const [result] = await elevationClient.lookupPoints([coordinates], {
+  const sampleRadiusMeters = positiveNumber(options.sampleRadiusMeters);
+  const result = await elevationClient.lookupPoint(coordinates, {
     source,
-    allowFallback: options.allowFallback
+    allowFallback: options.allowFallback,
+    sampleRadiusMeters
   });
   if (!result || typeof result.elevationMeters !== "number" || !Number.isFinite(result.elevationMeters)) {
     throw new Error("No terrain elevation was available for these coordinates.");
@@ -53,7 +56,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "getElevation") {
     task = fetchElevation(message.latitude, message.longitude, {
       source: message.source,
-      allowFallback: message.allowFallback
+      allowFallback: message.allowFallback,
+      sampleRadiusMeters: message.sampleRadiusMeters
     });
   } else if (message.type === "getPublicObservationCoordinates") {
     task = fetchPublicObservationCoordinates(message.observationId);

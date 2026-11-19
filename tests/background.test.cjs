@@ -93,3 +93,24 @@ test("background rejects missing and malformed elevations while allowing below-s
   assert.equal((await app.send({ type: "getElevation", latitude: 0, longitude: 0, allowFallback: false })).elevationMeters, -32);
   assert.equal((await app.send({ type: "openOptions" })).ok, true);
 });
+
+test("background getElevation computes min/max range when sampleRadiusMeters is provided", async () => {
+  const app = setup(url => {
+    const locations = new URL(url).searchParams.get("locations").split("|");
+    return {
+      status: "OK",
+      results: locations.map((_, idx) => ({ dataset: "eudem25m", elevation: 200 + idx * 25 }))
+    };
+  });
+  const res = await app.send({
+    type: "getElevation",
+    latitude: 47,
+    longitude: 8,
+    source: "opentopodata",
+    sampleRadiusMeters: 600
+  });
+  assert.equal(app.requests.length, 1);
+  assert.equal(res.elevationMeters, 200);
+  assert.equal(res.minElevationMeters, 200);
+  assert.equal(res.maxElevationMeters, 400);
+});

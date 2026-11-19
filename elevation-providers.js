@@ -5,7 +5,9 @@ globalThis.iNaturalistElevationProviders = (() => {
   const {
     DEFAULT_ELEVATION_SOURCE,
     resolveElevationSource,
-    normalizeCoordinates
+    positiveNumber,
+    normalizeCoordinates,
+    sampleCircleCoordinates
   } = iNaturalistElevation;
 
   const OPENTOPODATA_DATASETS = "ned10m,eudem25m,nzdem8m,mapzen";
@@ -366,13 +368,47 @@ globalThis.iNaturalistElevationProviders = (() => {
       return enqueueOpenTopoPoints(normalized, allowFallback);
     }
 
+    async function lookupPoint(point, options = {}) {
+      const coords = normalizeCoordinates(point?.latitude, point?.longitude);
+      if (!coords) throw new Error("The observation did not provide valid coordinates.");
+      const source = resolveElevationSource(options.source || DEFAULT_ELEVATION_SOURCE);
+      const radiusMeters = positiveNumber(options.sampleRadiusMeters);
+      if (!radiusMeters) {
+        const [result] = await lookupPoints([coords], { ...options, source });
+        return result;
+      }
+
+      let samplePoints;
+      if (source === "mapterhorn") {
+        const innerRing = sampleCircleCoordinates(coords.latitude, coords.longitude, radiusMeters * 0.5, 8).slice(1);
+        const outerRing = sampleCircleCoordinates(coords.latitude, coords.longitude, radiusMeters, 8);
+        samplePoints = [outerRing[0], ...innerRing, ...outerRing.slice(1)];
+      } else {
+        samplePoints = sampleCircleCoordinates(coords.latitude, coords.longitude, radiusMeters, 8);
+      }
+
+      const results = await lookupPoints(samplePoints, { ...options, source });
+      const center = results[0];
+      let minElevationMeters = center.elevationMeters;
+      let maxElevationMeters = center.elevationMeters;
+      for (const entry of results) {
+        if (entry.elevationMeters < minElevationMeters) minElevationMeters = entry.elevationMeters;
+        if (entry.elevationMeters > maxElevationMeters) maxElevationMeters = entry.elevationMeters;
+      }
+      return {
+        ...center,
+        minElevationMeters,
+        maxElevationMeters
+      };
+    }
+
     function clearCaches() {
       tileCache.clear();
       inFlightTiles.clear();
       missingZ14Tiles.clear();
     }
 
-    return Object.freeze({ lookupPoints, clearCaches });
+    return Object.freeze({ lookupPoints, lookupPoint, clearCaches });
   }
 
   return Object.freeze({

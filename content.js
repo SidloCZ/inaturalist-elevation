@@ -7,13 +7,18 @@
   const {
     VIEWER_OBSERVATION_FIELDS,
     DEFAULT_ELEVATION_SOURCE,
+    DEFAULT_UNCERTAINTY_MODE,
+    DEFAULT_ACCURACY_THRESHOLD,
     resolveElevationSource,
+    resolveUncertaintyMode,
+    resolveAccuracyThreshold,
     resolveElevationUnit,
     coordinatesFromObservation,
     fetchJSON
   } = iNaturalistElevation;
   const MAX_CACHED_OBSERVATIONS = 200;
   const MAX_INTERCEPTED_OBSERVATIONS = 300;
+  const SIGNIFICANT_RANGE_METERS = 10;
   let currentObservationId = null;
   let currentIdentifyObservationId = null;
   let injectionTimer = null;
@@ -21,6 +26,8 @@
   let preferredUnit = resolveElevationUnit("auto");
   let allowPrivateCoordinates = false;
   let elevationSource = DEFAULT_ELEVATION_SOURCE;
+  let uncertaintyMode = DEFAULT_UNCERTAINTY_MODE;
+  let accuracyThresholdMeters = DEFAULT_ACCURACY_THRESHOLD;
   let viewerApiToken = null;
   let pendingTokenRequest = null;
   const resultCache = new Map();
@@ -159,15 +166,44 @@
     return rounded.toLocaleString();
   }
 
+  function convertToPreferredUnit(meters) {
+    return preferredUnit === "feet" ? meters * METERS_TO_FEET : meters;
+  }
+
+  function unitSuffix() {
+    return preferredUnit === "feet" ? "ft" : "m";
+  }
+
   function formatElevation(meters) {
-    if (preferredUnit === "feet") {
-      return `${formatNumber(meters * METERS_TO_FEET)} ft`;
-    }
-    return `${formatNumber(meters)} m`;
+    return `${formatNumber(convertToPreferredUnit(meters))} ${unitSuffix()}`;
+  }
+
+  function formatElevationRange(minMeters, maxMeters) {
+    const minFormatted = formatNumber(convertToPreferredUnit(minMeters));
+    const maxFormatted = formatNumber(convertToPreferredUnit(maxMeters));
+    if (minFormatted === maxFormatted) return `${minFormatted} ${unitSuffix()}`;
+    return `${minFormatted}–${maxFormatted} ${unitSuffix()}`;
   }
 
   function renderCachedResult(root, cached) {
-    const prefix = cached.approximate ? "≈ " : "";
+    if (cached.state === "uncertain") {
+      setStatus(root, "uncertain", "uncertain", cached.title);
+      return;
+    }
+    const hasSignificantRange = cached.minElevationMeters != null
+      && cached.maxElevationMeters != null
+      && (cached.maxElevationMeters - cached.minElevationMeters) >= SIGNIFICANT_RANGE_METERS;
+    if (hasSignificantRange) {
+      const prefix = cached.approximate ? "≈ " : "";
+      setStatus(
+        root,
+        "success",
+        `${prefix}${formatElevationRange(cached.minElevationMeters, cached.maxElevationMeters)}`,
+        cached.title
+      );
+      return;
+    }
+    const prefix = cached.approximate || cached.uncertain ? "≈ " : "";
     setStatus(
       root,
       "success",
@@ -184,33 +220,73 @@
     status.title = title;
   }
 
+  function isLocationUncertain(coordinates, thresholdMeters) {
+    return thresholdMeters > 0
+      && coordinates.accuracyMeters != null
+      && coordinates.accuracyMeters > thresholdMeters;
+  }
+
   function lookupResult(observationId) {
     if (resultCache.has(observationId)) return Promise.resolve(resultCache.get(observationId));
     if (pendingLookups.has(observationId)) return pendingLookups.get(observationId);
     const generation = settingsGeneration;
     const allowPrivate = allowPrivateCoordinates;
     const source = elevationSource;
+    const mode = uncertaintyMode;
+    const threshold = accuracyThresholdMeters;
     const task = (async () => {
       const coordinates = await resolveCoordinates(observationId, allowPrivate);
       // Never start a precise-location lookup after the user disables that setting.
       if (generation !== settingsGeneration) throw new Error("Settings changed.");
+
+      const uncertain = isLocationUncertain(coordinates, threshold);
+      const privacyNote = coordinates.approximate
+        ? " Approximate: iNaturalist obscured the observation's exact location."
+        : "";
+      const accuracyNote = coordinates.accuracyMeters != null
+        ? ` Location accuracy: ±${Math.round(coordinates.accuracyMeters)} m.`
+        : "";
+
+      if (uncertain && mode === "hide") {
+        const cached = {
+          state: "uncertain",
+          approximate: coordinates.approximate,
+          uncertain: true,
+          title: [
+            `Coordinates: ${coordinates.source}.`,
+            `Hidden because uncertainty (±${Math.round(coordinates.accuracyMeters)} m) exceeds ${threshold} m threshold.`,
+            privacyNote
+          ].join(" ").trim()
+        };
+        if (generation === settingsGeneration) {
+          resultCache.set(observationId, cached);
+          if (resultCache.size > MAX_CACHED_OBSERVATIONS) {
+            resultCache.delete(resultCache.keys().next().value);
+          }
+        }
+        return cached;
+      }
+
       const result = await sendMessage({
         type: "getElevation",
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        source
+        source,
+        sampleRadiusMeters: uncertain && mode === "range" ? coordinates.accuracyMeters : undefined
       });
 
-      const privacyNote = coordinates.approximate
-        ? " Approximate: iNaturalist obscured the observation's exact location."
-        : "";
       const title = [
         `Coordinates: ${coordinates.source}.`,
+        accuracyNote,
         privacyNote
       ].join(" ").trim();
       const cached = {
+        state: "success",
         elevationMeters: result.elevationMeters,
+        minElevationMeters: uncertain && mode === "range" ? result.minElevationMeters : undefined,
+        maxElevationMeters: uncertain && mode === "range" ? result.maxElevationMeters : undefined,
         approximate: coordinates.approximate,
+        uncertain,
         title
       };
       if (generation === settingsGeneration) {
@@ -409,7 +485,17 @@
       if (sourceChanged) {
         elevationSource = resolveElevationSource(changes.elevationSource.newValue);
       }
-      const invalidateCache = privacyChanged || sourceChanged;
+      const modeChanged = Boolean(changes.uncertaintyMode)
+        && resolveUncertaintyMode(changes.uncertaintyMode.newValue) !== uncertaintyMode;
+      if (modeChanged) {
+        uncertaintyMode = resolveUncertaintyMode(changes.uncertaintyMode.newValue);
+      }
+      const thresholdChanged = Boolean(changes.accuracyThresholdMeters)
+        && resolveAccuracyThreshold(changes.accuracyThresholdMeters.newValue) !== accuracyThresholdMeters;
+      if (thresholdChanged) {
+        accuracyThresholdMeters = resolveAccuracyThreshold(changes.accuracyThresholdMeters.newValue);
+      }
+      const invalidateCache = privacyChanged || sourceChanged || modeChanged || thresholdChanged;
       if (invalidateCache) {
         settingsGeneration += 1;
         resultCache.clear();
@@ -437,12 +523,16 @@
   chrome.storage.sync.get({
     elevationUnit: "auto",
     allowPrivateCoordinates: true,
-    elevationSource: DEFAULT_ELEVATION_SOURCE
+    elevationSource: DEFAULT_ELEVATION_SOURCE,
+    uncertaintyMode: DEFAULT_UNCERTAINTY_MODE,
+    accuracyThresholdMeters: DEFAULT_ACCURACY_THRESHOLD
   }, settings => {
     if (!chrome.runtime.lastError) {
       preferredUnit = resolveElevationUnit(settings.elevationUnit);
       allowPrivateCoordinates = settings.allowPrivateCoordinates === true;
       elevationSource = resolveElevationSource(settings.elevationSource);
+      uncertaintyMode = resolveUncertaintyMode(settings.uncertaintyMode);
+      accuracyThresholdMeters = resolveAccuracyThreshold(settings.accuracyThresholdMeters);
     }
     start();
   });

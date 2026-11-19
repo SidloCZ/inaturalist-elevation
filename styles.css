@@ -34,6 +34,12 @@
   cursor: help;
 }
 
+#inat-elevation-extension .inat-elevation-status[data-state="uncertain"],
+#inat-elevation-identify-extension .inat-elevation-status[data-state="uncertain"] {
+  cursor: help;
+  opacity: 0.72;
+}
+
 #inat-elevation-extension .inat-elevation-info,
 #inat-elevation-identify-extension .inat-elevation-info {
   appearance: none;

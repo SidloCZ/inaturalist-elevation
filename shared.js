@@ -8,9 +8,22 @@ globalThis.iNaturalistElevation = (() => {
     "id,geojson,private_geojson,obscured,positional_accuracy,public_positional_accuracy,private_positional_accuracy,location,geoprivacy";
   const ELEVATION_SOURCES = Object.freeze(["opentopodata", "mapterhorn", "open-meteo"]);
   const DEFAULT_ELEVATION_SOURCE = "opentopodata";
+  const UNCERTAINTY_MODES = Object.freeze(["range", "mark", "hide"]);
+  const DEFAULT_UNCERTAINTY_MODE = "range";
+  const DEFAULT_ACCURACY_THRESHOLD = 100;
+  const EARTH_RADIUS_METERS = 6371000;
 
   function resolveElevationSource(source) {
     return ELEVATION_SOURCES.includes(source) ? source : DEFAULT_ELEVATION_SOURCE;
+  }
+
+  function resolveUncertaintyMode(mode) {
+    return UNCERTAINTY_MODES.includes(mode) ? mode : DEFAULT_UNCERTAINTY_MODE;
+  }
+
+  function resolveAccuracyThreshold(value) {
+    const num = coordinateNumber(value);
+    return Number.isFinite(num) && num >= 0 ? Math.round(num) : DEFAULT_ACCURACY_THRESHOLD;
   }
 
   function resolveElevationUnit(preference, locale = globalThis.navigator?.language) {
@@ -78,6 +91,41 @@ globalThis.iNaturalistElevation = (() => {
     return parts.length === 2 ? normalizeCoordinates(parts[0], parts[1], options) : null;
   }
 
+  function sampleCircleCoordinates(latitude, longitude, radiusMeters, ringPoints = 8) {
+    const center = normalizeCoordinates(latitude, longitude);
+    if (!center) return [];
+    const radiusNum = coordinateNumber(radiusMeters);
+    if (!Number.isFinite(radiusNum) || radiusNum <= 0) {
+      return [{ latitude: center.latitude, longitude: center.longitude }];
+    }
+    const clampedRadius = Math.max(1, Math.min(25000, radiusNum));
+    const angularDistance = clampedRadius / EARTH_RADIUS_METERS;
+    const lat1 = (center.latitude * Math.PI) / 180;
+    const lon1 = (center.longitude * Math.PI) / 180;
+    const sinLat1 = Math.sin(lat1);
+    const cosLat1 = Math.cos(lat1);
+    const sinDist = Math.sin(angularDistance);
+    const cosDist = Math.cos(angularDistance);
+
+    const points = [{ latitude: center.latitude, longitude: center.longitude }];
+    for (let i = 0; i < ringPoints; i += 1) {
+      const bearing = (2 * Math.PI * i) / ringPoints;
+      const lat2 = Math.asin(sinLat1 * cosDist + cosLat1 * sinDist * Math.cos(bearing));
+      const lon2 = lon1 + Math.atan2(
+        Math.sin(bearing) * sinDist * cosLat1,
+        cosDist - sinLat1 * Math.sin(lat2)
+      );
+      const latDeg = Math.max(-89.9, Math.min(89.9, (lat2 * 180) / Math.PI));
+      const rawLonDeg = (lon2 * 180) / Math.PI;
+      const lonDeg = (((rawLonDeg + 540) % 360) - 180);
+      points.push({
+        latitude: Number(latDeg.toFixed(6)),
+        longitude: Number(lonDeg.toFixed(6))
+      });
+    }
+    return points;
+  }
+
   async function fetchJSON(url, options = {}, timeoutMs = 12000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -98,11 +146,17 @@ globalThis.iNaturalistElevation = (() => {
     VIEWER_OBSERVATION_FIELDS,
     ELEVATION_SOURCES,
     DEFAULT_ELEVATION_SOURCE,
+    UNCERTAINTY_MODES,
+    DEFAULT_UNCERTAINTY_MODE,
+    DEFAULT_ACCURACY_THRESHOLD,
     resolveElevationSource,
+    resolveUncertaintyMode,
+    resolveAccuracyThreshold,
     resolveElevationUnit,
     positiveNumber,
     normalizeCoordinates,
     coordinatesFromObservation,
+    sampleCircleCoordinates,
     fetchJSON
   });
 })();
