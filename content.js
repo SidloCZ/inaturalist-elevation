@@ -548,13 +548,47 @@
     injectionTimer = window.setTimeout(inject, 100);
   }
 
+  function isOwnMutationNode(node) {
+    if (!node || typeof node.closest !== "function") return false;
+    return Boolean(node.closest(`#${ROOT_ID}, #${IDENTIFY_ROOT_ID}`));
+  }
+
   function start() {
-    const observer = new MutationObserver(scheduleInjection);
-    observer.observe(document.documentElement, {
-      childList: true, subtree: true, attributes: true, attributeFilter: ["href"]
+    let observedRoot = document.body || document.documentElement;
+    const observerConfig = {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["href"]
+    };
+    const observer = new MutationObserver(mutations => {
+      if (typeof document === "undefined" || !document) return;
+      if (observedRoot !== document.body && document.body) {
+        observer.disconnect();
+        observedRoot = document.body;
+        observer.observe(observedRoot, observerConfig);
+      }
+      const hasExternalChange = mutations.some(mutation => {
+        if (isOwnMutationNode(mutation.target)) return false;
+        if (mutation.type !== "childList") return true;
+        for (const node of mutation.addedNodes) {
+          if (!isOwnMutationNode(node)) return true;
+        }
+        for (const node of mutation.removedNodes) {
+          if (!isOwnMutationNode(node)) return true;
+        }
+        return false;
+      });
+      if (hasExternalChange) scheduleInjection();
+    });
+    observer.observe(observedRoot, observerConfig);
+    window.addEventListener("pagehide", () => {
+      window.clearTimeout(injectionTimer);
+      observer.disconnect();
     });
     window.addEventListener("popstate", scheduleInjection);
-    window.setInterval(inject, 1000);
+    window.addEventListener("hashchange", scheduleInjection);
+    window.navigation?.addEventListener?.("navigate", scheduleInjection);
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== "sync") return;

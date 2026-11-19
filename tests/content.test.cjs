@@ -473,3 +473,55 @@ test("Identify pages batch-prefetch intercepted results and upgrade uncertain ob
   await until(() => complete(obsPage.root()));
   assert.equal(obsPage.messages.some(m => m.type === "getElevationBatch"), false);
 });
+
+test("replaces 1-second polling with navigation hooks and scoped DOM observer", async t => {
+  const dom = new JSDOM(PAGE, { url: "https://www.inaturalist.org/observations/123", runScripts: "outside-only" });
+  t.after(() => dom.window.close());
+  const { window } = dom;
+  Object.defineProperty(window.navigator, "language", { value: "en-GB", configurable: true });
+  let intervalCalls = 0;
+  window.setInterval = () => {
+    intervalCalls += 1;
+    return 1;
+  };
+  const navigateListeners = [];
+  window.navigation = {
+    addEventListener(type, fn) {
+      if (type === "navigate") navigateListeners.push(fn);
+    }
+  };
+  const messages = [];
+  window.chrome = {
+    runtime: {
+      sendMessage(message, callback) {
+        messages.push(message);
+        Promise.resolve(message.type === "getPublicObservationCoordinates"
+          ? { ok: true, latitude: Number(message.observationId), longitude: 0, approximate: false, source: "public" }
+          : { ok: true, elevationMeters: message.latitude }).then(callback);
+      }
+    },
+    storage: {
+      sync: { get(defaults, callback) { callback({ ...defaults, allowPrivateCoordinates: false }); } },
+      onChanged: { addListener() {} }
+    }
+  };
+  for (const file of ["shared.js", "content.js"]) window.eval(readFileSync(join(__dirname, "..", file), "utf8"));
+
+  await until(() => complete(window.document.getElementById("inat-elevation-extension")));
+  assert.equal(intervalCalls, 0);
+  assert.equal(value(window.document.getElementById("inat-elevation-extension")), "123 m");
+
+  // SPA navigation via Navigation API triggers re-injection without polling.
+  window.history.pushState({}, "", "/observations/789");
+  for (const fn of navigateListeners) fn();
+  await until(() => window.document.getElementById("inat-elevation-extension")?.dataset.observationId === "789"
+    && complete(window.document.getElementById("inat-elevation-extension")));
+  assert.equal(value(window.document.getElementById("inat-elevation-extension")), "789 m");
+
+  // Popstate back to /observations/123 re-injects cleanly.
+  window.history.pushState({}, "", "/observations/123");
+  window.dispatchEvent(new window.PopStateEvent("popstate"));
+  await until(() => window.document.getElementById("inat-elevation-extension")?.dataset.observationId === "123"
+    && complete(window.document.getElementById("inat-elevation-extension")));
+  assert.equal(value(window.document.getElementById("inat-elevation-extension")), "123 m");
+});
