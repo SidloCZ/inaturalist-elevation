@@ -138,3 +138,43 @@ test("macrostratUrl formats valid coordinates and rejects invalid inputs", () =>
   assert.equal(macrostratUrl(95, 0), null);
   assert.equal(macrostratUrl(null, 0), null);
 });
+
+test("extension helpers support both Promise-based browser API and callback-based chrome API", async () => {
+  const sentArgs = [];
+  const browserContext = vm.createContext({
+    fetch: async () => { throw new Error("Unexpected fetch"); },
+    AbortController,
+    setTimeout,
+    clearTimeout,
+    browser: {
+      runtime: {
+        async sendMessage(message) {
+          sentArgs.push(arguments.length);
+          return { ok: true, echo: message };
+        }
+      },
+      storage: {
+        sync: {
+          async get(defaults) {
+            return { ...defaults, elevationUnit: "feet" };
+          }
+        }
+      }
+    }
+  });
+  vm.runInContext(code, browserContext);
+  const res = await browserContext.iNaturalistElevation.sendRuntimeMessage({ type: "ping" });
+  assert.equal(res.echo.type, "ping");
+  assert.deepEqual(sentArgs, [1]);
+
+  let gotSettings = null;
+  await new Promise(resolve => {
+    browserContext.iNaturalistElevation.invokeExtensionMethod(
+      browserContext.browser.storage.sync,
+      "get",
+      [{ elevationUnit: "auto" }],
+      value => { gotSettings = value; resolve(); }
+    );
+  });
+  assert.equal(gotSettings.elevationUnit, "feet");
+});

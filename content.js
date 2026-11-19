@@ -16,8 +16,12 @@
     resolveElevationUnit,
     coordinatesFromObservation,
     macrostratUrl,
+    getExtensionAPI,
+    invokeExtensionMethod,
+    sendRuntimeMessage,
     fetchJSON
   } = iNaturalistElevation;
+  const ext = getExtensionAPI();
   const MAX_CACHED_OBSERVATIONS = 200;
   const MAX_INTERCEPTED_OBSERVATIONS = 300;
   const MAX_BATCH_PREFETCH = 100;
@@ -115,21 +119,7 @@
   }
 
   function sendMessage(message) {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(message, response => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        if (!response || !response.ok) {
-          reject(new Error(response && response.error
-            ? response.error
-            : "The extension did not receive a response."));
-          return;
-        }
-        resolve(response);
-      });
-    });
+    return sendRuntimeMessage(message);
   }
 
   async function resolveCoordinates(observationId, allowPrivate) {
@@ -669,7 +659,7 @@
     window.addEventListener("hashchange", scheduleInjection);
     window.navigation?.addEventListener?.("navigate", scheduleInjection);
 
-    chrome.storage.onChanged.addListener((changes, areaName) => {
+    ext?.storage?.onChanged?.addListener((changes, areaName) => {
       if (areaName !== "sync") return;
       if (changes.elevationUnit) {
         preferredUnit = resolveElevationUnit(changes.elevationUnit.newValue);
@@ -734,21 +724,30 @@
   });
   window.dispatchEvent(new window.CustomEvent("inat-elevation:ready"));
 
-  chrome.storage.sync.get({
-    elevationUnit: "auto",
-    allowPrivateCoordinates: true,
-    elevationSource: DEFAULT_ELEVATION_SOURCE,
-    uncertaintyMode: DEFAULT_UNCERTAINTY_MODE,
-    accuracyThresholdMeters: DEFAULT_ACCURACY_THRESHOLD
-  }, settings => {
-    if (!chrome.runtime.lastError) {
-      preferredUnit = resolveElevationUnit(settings.elevationUnit);
-      allowPrivateCoordinates = settings.allowPrivateCoordinates === true;
-      elevationSource = resolveElevationSource(settings.elevationSource);
-      uncertaintyMode = resolveUncertaintyMode(settings.uncertaintyMode);
-      accuracyThresholdMeters = resolveAccuracyThreshold(settings.accuracyThresholdMeters);
+  invokeExtensionMethod(
+    ext?.storage?.sync,
+    "get",
+    [{
+      elevationUnit: "auto",
+      allowPrivateCoordinates: true,
+      elevationSource: DEFAULT_ELEVATION_SOURCE,
+      uncertaintyMode: DEFAULT_UNCERTAINTY_MODE,
+      accuracyThresholdMeters: DEFAULT_ACCURACY_THRESHOLD
+    }],
+    settings => {
+      if (settings && typeof settings === "object") {
+        preferredUnit = resolveElevationUnit(settings.elevationUnit);
+        allowPrivateCoordinates = settings.allowPrivateCoordinates === true;
+        elevationSource = resolveElevationSource(settings.elevationSource);
+        uncertaintyMode = resolveUncertaintyMode(settings.uncertaintyMode);
+        accuracyThresholdMeters = resolveAccuracyThreshold(settings.accuracyThresholdMeters);
+      }
+      settingsLoaded = true;
+      start();
+    },
+    () => {
+      settingsLoaded = true;
+      start();
     }
-    settingsLoaded = true;
-    start();
-  });
+  );
 })();

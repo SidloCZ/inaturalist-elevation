@@ -133,6 +133,58 @@ globalThis.iNaturalistElevation = (() => {
     return `https://macrostrat.org/map/loc/${coords.longitude}/${coords.latitude}#z=13`;
   }
 
+  function getExtensionAPI() {
+    return globalThis.browser || globalThis.chrome || null;
+  }
+
+  function invokeExtensionMethod(target, methodName, args, onSuccess, onError) {
+    const api = getExtensionAPI();
+    const fn = target?.[methodName];
+    if (typeof fn !== "function") {
+      onError?.(new Error(`Extension API ${methodName} is unavailable.`));
+      return;
+    }
+    if (globalThis.browser && api === globalThis.browser) {
+      Promise.resolve()
+        .then(() => fn.apply(target, args))
+        .then(result => onSuccess?.(result), error => onError?.(error));
+      return;
+    }
+    try {
+      fn.call(target, ...args, result => {
+        const lastError = api?.runtime?.lastError;
+        if (lastError) {
+          onError?.(new Error(lastError.message || "Extension API error."));
+        } else {
+          onSuccess?.(result);
+        }
+      });
+    } catch (error) {
+      onError?.(error);
+    }
+  }
+
+  function sendRuntimeMessage(message) {
+    const api = getExtensionAPI();
+    return new Promise((resolve, reject) => {
+      invokeExtensionMethod(
+        api?.runtime,
+        "sendMessage",
+        [message],
+        response => {
+          if (!response || !response.ok) {
+            reject(new Error(response && response.error
+              ? response.error
+              : "The extension did not receive a response."));
+            return;
+          }
+          resolve(response);
+        },
+        error => reject(error instanceof Error ? error : new Error(String(error)))
+      );
+    });
+  }
+
   async function fetchJSON(url, options = {}, timeoutMs = 12000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -166,6 +218,9 @@ globalThis.iNaturalistElevation = (() => {
     coordinatesFromObservation,
     sampleCircleCoordinates,
     macrostratUrl,
+    getExtensionAPI,
+    invokeExtensionMethod,
+    sendRuntimeMessage,
     fetchJSON
   });
 })();

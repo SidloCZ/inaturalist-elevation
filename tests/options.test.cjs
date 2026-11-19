@@ -123,3 +123,35 @@ test("uncertainty mode and accuracy threshold default cleanly and save numeric t
   assert.equal(reloaded.uncertaintyMode.value, "mark");
   assert.equal(reloaded.accuracyThreshold.value, "0");
 });
+
+test("options page works with Promise-based Firefox browser.storage.sync API", async t => {
+  const dom = new JSDOM(readFileSync(join(__dirname, "../options.html"), "utf8"), { runScripts: "outside-only" });
+  t.after(() => dom.window.close());
+  Object.defineProperty(dom.window.navigator, "language", { value: "en-GB", configurable: true });
+  const writes = [];
+  dom.window.browser = {
+    storage: {
+      sync: {
+        async get(defaults) {
+          return { ...defaults, elevationSource: "mapterhorn", allowPrivateCoordinates: false };
+        },
+        async set(values) {
+          writes.push(JSON.parse(JSON.stringify(values)));
+        }
+      }
+    }
+  };
+  for (const file of ["shared.js", "options.js"]) dom.window.eval(readFileSync(join(__dirname, "..", file), "utf8"));
+  await new Promise(resolve => setTimeout(resolve, 10));
+
+  const source = dom.window.document.getElementById("elevation-source");
+  const hideExact = dom.window.document.getElementById("hide-exact-coordinates");
+  assert.equal(source.value, "mapterhorn");
+  assert.equal(hideExact.checked, true);
+
+  source.value = "opentopodata";
+  source.dispatchEvent(new dom.window.Event("change"));
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.deepEqual(writes, [{ elevationSource: "opentopodata" }]);
+  assert.equal(dom.window.document.getElementById("save-status").textContent, "Saved");
+});

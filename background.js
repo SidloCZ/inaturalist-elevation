@@ -10,9 +10,11 @@ const {
   positiveNumber,
   normalizeCoordinates,
   coordinatesFromObservation,
+  getExtensionAPI,
   fetchJSON
 } = iNaturalistElevation;
 const { createElevationClient } = iNaturalistElevationProviders;
+const ext = getExtensionAPI();
 const REQUEST_OPTIONS = {
   credentials: "omit",
   referrerPolicy: "no-referrer",
@@ -74,8 +76,8 @@ async function fetchPublicObservationCoordinates(observationId) {
   return coordinates;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id || !message || typeof message !== "object") return false;
+ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== ext.runtime.id || !message || typeof message !== "object") return false;
 
   let task;
   if (message.type === "getElevation") {
@@ -92,7 +94,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === "getPublicObservationCoordinates") {
     task = fetchPublicObservationCoordinates(message.observationId);
   } else if (message.type === "openOptions") {
-    task = chrome.runtime.openOptionsPage().then(() => ({}));
+    task = Promise.resolve(ext.runtime.openOptionsPage()).then(() => ({}));
   } else {
     return false;
   }

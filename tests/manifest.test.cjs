@@ -43,9 +43,19 @@ test("manifest, package version, entry points, and declared PNG dimensions agree
   assert.deepEqual(manifest.permissions, ["storage"]);
   assert.ok(manifest.host_permissions.includes("https://api.opentopodata.org/*"));
   assert.ok(manifest.host_permissions.includes("https://tiles.mapterhorn.com/*"));
-  const entries = [manifest.background.service_worker, "elevation-providers.js", manifest.options_ui.page,
-    ...manifest.content_scripts.flatMap(script => [...script.js, ...(script.css || [])])];
+  const entries = [
+    manifest.background.service_worker,
+    ...manifest.background.scripts,
+    "elevation-providers.js",
+    manifest.options_ui.page,
+    ...manifest.content_scripts.flatMap(script => [...script.js, ...(script.css || [])])
+  ];
   for (const name of entries) assert.ok(existsSync(join(root, name)), name);
+  assert.deepEqual(manifest.background.scripts, ["shared.js", "elevation-providers.js", "background.js"]);
+  assert.equal(manifest.browser_specific_settings.gecko.id, "inaturalist-elevation@armenenikolopov");
+  assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, "128.0");
+  assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions, { required: ["none"] });
+  assert.equal(manifest.browser_specific_settings.gecko_android.strict_min_version, "128.0");
   const mainWorldScript = manifest.content_scripts.find(script => script.world === "MAIN");
   assert.ok(mainWorldScript);
   assert.deepEqual(mainWorldScript.js, ["page-interceptor.js"]);
@@ -59,4 +69,22 @@ test("manifest, package version, entry points, and declared PNG dimensions agree
     assert.equal(bytes.readUInt32BE(16), Number(size));
     assert.equal(bytes.readUInt32BE(20), Number(size));
   }
+});
+
+test("package manifest transform isolates Chrome Web Store and Firefox targets cleanly", async () => {
+  const { transformManifest } = await import("../scripts/package.mjs");
+  const chromeManifest = transformManifest(manifest, "chrome-web-store");
+  assert.equal(chromeManifest.background.service_worker, "background.js");
+  assert.equal(chromeManifest.background.scripts, undefined);
+  assert.equal(chromeManifest.browser_specific_settings, undefined);
+
+  const firefoxManifest = transformManifest(manifest, "firefox");
+  assert.equal(firefoxManifest.background.service_worker, undefined);
+  assert.deepEqual(firefoxManifest.background.scripts, ["shared.js", "elevation-providers.js", "background.js"]);
+  assert.ok(firefoxManifest.browser_specific_settings.gecko.id);
+
+  // Source manifest object remains unmutated.
+  assert.ok(manifest.background.service_worker);
+  assert.ok(manifest.background.scripts);
+  assert.ok(manifest.browser_specific_settings);
 });

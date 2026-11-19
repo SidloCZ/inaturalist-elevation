@@ -4,12 +4,17 @@ Automatically adds terrain elevation to iNaturalist observation pages and the Id
 
 ## Install
 
+### Chrome / Chromium
 1. Download the [extension ZIP](https://github.com/armenenikolopov/inaturalist-elevation/archive/refs/heads/main.zip) and unzip it.
 2. Open `chrome://extensions` and enable **Developer mode**.
 3. Select **Load unpacked** and choose the folder containing `manifest.json`.
 4. Refresh iNaturalist. Elevation appears automatically beside the location.
 
 To update, replace the installed files, click **Reload** in `chrome://extensions`, and refresh iNaturalist.
+
+### Firefox (Desktop and Android)
+1. Download and unzip the extension folder (or build `dist/*-firefox.zip` with `npm run package`).
+2. Open `about:debugging#/runtime/this-firefox`, select **Load Temporary Add-on…**, and pick `manifest.json` (requires Firefox 128+).
 
 ## Settings and privacy
 
@@ -29,7 +34,7 @@ Values estimate terrain elevation; obscured coordinates can yield very different
 
 Node.js 22.13+: `npm ci`, then `npm test`. No runtime dependencies.
 
-`npm run package` creates two ZIPs in `dist/`: `chrome-web-store` for upload or local installation after unzipping, and `source` for development. See [testing](docs/TESTING.md) and [release notes](docs/RELEASE.md).
+`npm run package` creates three ZIPs in `dist/`: `chrome-web-store` and `firefox` for store upload or local installation, and `source` for development. See [testing](docs/TESTING.md) and [release notes](docs/RELEASE.md).
 
 Created by [Armen Enikolopov](https://github.com/armenenikolopov).
 
