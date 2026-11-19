@@ -11,6 +11,7 @@ globalThis.iNaturalistElevation = (() => {
   const UNCERTAINTY_MODES = Object.freeze(["range", "mark", "hide"]);
   const DEFAULT_UNCERTAINTY_MODE = "range";
   const DEFAULT_ACCURACY_THRESHOLD = 100;
+  const DEEP_OCEAN_THRESHOLD_METERS = -450;
   const EARTH_RADIUS_METERS = 6371000;
 
   function resolveElevationSource(source) {
@@ -126,6 +127,12 @@ globalThis.iNaturalistElevation = (() => {
     return points;
   }
 
+  function macrostratUrl(latitude, longitude) {
+    const coords = normalizeCoordinates(latitude, longitude);
+    if (!coords) return null;
+    return `https://macrostrat.org/map/loc/${coords.longitude}/${coords.latitude}#z=13`;
+  }
+
   async function fetchJSON(url, options = {}, timeoutMs = 12000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -149,6 +156,7 @@ globalThis.iNaturalistElevation = (() => {
     UNCERTAINTY_MODES,
     DEFAULT_UNCERTAINTY_MODE,
     DEFAULT_ACCURACY_THRESHOLD,
+    DEEP_OCEAN_THRESHOLD_METERS,
     resolveElevationSource,
     resolveUncertaintyMode,
     resolveAccuracyThreshold,
@@ -157,6 +165,7 @@ globalThis.iNaturalistElevation = (() => {
     normalizeCoordinates,
     coordinatesFromObservation,
     sampleCircleCoordinates,
+    macrostratUrl,
     fetchJSON
   });
 })();

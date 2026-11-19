@@ -525,3 +525,67 @@ test("replaces 1-second polling with navigation hooks and scoped DOM observer", 
     && complete(window.document.getElementById("inat-elevation-extension")));
   assert.equal(value(window.document.getElementById("inat-elevation-extension")), "123 m");
 });
+
+test("marine bathymetry, terrestrial below-sea-level basins, rich tooltips, and Macrostrat link render accurately", async t => {
+  const oceanApp = setup(t, {
+    locale: "en-GB",
+    settings: { allowPrivateCoordinates: false },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 35, longitude: -40, approximate: false, accuracyMeters: 12, source: "iNaturalist public coordinates" }
+      : {
+          ok: true,
+          elevationMeters: -3845,
+          provider: "opentopodata",
+          dataset: "mapzen",
+          resolutionLabel: "Mapzen ~30 m",
+          fallbackFrom: "open-meteo"
+        }
+  });
+  await until(() => complete(oceanApp.root()));
+  assert.equal(value(oceanApp.root()), "Depth: 3,845 m");
+  const oceanTitle = oceanApp.root().querySelector(".inat-elevation-status").title;
+  assert.match(oceanTitle, /Source: OpenTopoData \(Mapzen ~30 m\) \(fallback from Open-Meteo\)/);
+  assert.match(oceanTitle, /±12 m/);
+  assert.match(oceanTitle, /Ocean bathymetry/);
+
+  const oceanLink = oceanApp.root().querySelector("a.inat-elevation-map-link");
+  assert.equal(oceanLink.hidden, false);
+  assert.equal(oceanLink.href, "https://macrostrat.org/map/loc/-40/35#z=13");
+  assert.equal(oceanLink.rel, "noopener noreferrer");
+
+  // Unit switch updates both displayed depth and tooltip formatting if range is shown.
+  oceanApp.change({ elevationUnit: { newValue: "feet" } });
+  assert.equal(value(oceanApp.root()), "Depth: 12,615 ft");
+
+  // Terrestrial below-sea-level basin (Death Valley -86 m) is NOT labeled Depth.
+  const basinApp = setup(t, {
+    locale: "en-GB",
+    settings: { allowPrivateCoordinates: false },
+    handler: message => message.type === "getPublicObservationCoordinates"
+      ? { ok: true, latitude: 36.24, longitude: -116.82, approximate: false, accuracyMeters: 400, source: "public" }
+      : {
+          ok: true,
+          elevationMeters: -86,
+          minElevationMeters: -90,
+          maxElevationMeters: -60,
+          provider: "mapterhorn",
+          resolutionLabel: "Mapterhorn LiDAR/DEM (z14)"
+        }
+  });
+  await until(() => complete(basinApp.root()));
+  assert.equal(value(basinApp.root()), "-90–-60 m");
+  const basinTitle = basinApp.root().querySelector(".inat-elevation-status").title;
+  assert.match(basinTitle, /Source: Mapterhorn LiDAR\/DEM \(z14\)/);
+  assert.match(basinTitle, /Point: -86 m · Range: -90–-60 m/);
+
+  basinApp.change({ elevationUnit: { newValue: "feet" } });
+  assert.match(basinApp.root().querySelector(".inat-elevation-status").title, /Point: -282 ft/);
+
+  // Unavailable state keeps Macrostrat link hidden.
+  const errorApp = setup(t, {
+    settings: { allowPrivateCoordinates: false },
+    handler: () => ({ ok: false, error: "No coordinates" })
+  });
+  await until(() => errorApp.root()?.querySelector(".inat-elevation-status").dataset.state === "error");
+  assert.equal(errorApp.root().querySelector("a.inat-elevation-map-link").hidden, true);
+});

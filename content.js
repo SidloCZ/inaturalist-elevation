@@ -9,11 +9,13 @@
     DEFAULT_ELEVATION_SOURCE,
     DEFAULT_UNCERTAINTY_MODE,
     DEFAULT_ACCURACY_THRESHOLD,
+    DEEP_OCEAN_THRESHOLD_METERS,
     resolveElevationSource,
     resolveUncertaintyMode,
     resolveAccuracyThreshold,
     resolveElevationUnit,
     coordinatesFromObservation,
+    macrostratUrl,
     fetchJSON
   } = iNaturalistElevation;
   const MAX_CACHED_OBSERVATIONS = 200;
@@ -189,39 +191,114 @@
     return `${minFormatted}–${maxFormatted} ${unitSuffix()}`;
   }
 
-  function renderCachedResult(root, cached) {
-    if (cached.state === "uncertain") {
-      setStatus(root, "uncertain", "uncertain", cached.title);
-      return;
+  function formatSourceDescription(cached) {
+    const providerLabels = {
+      opentopodata: "OpenTopoData",
+      mapterhorn: "Mapterhorn",
+      "open-meteo": "Open-Meteo"
+    };
+    const providerName = providerLabels[cached.provider] || cached.provider || "";
+    const detail = cached.resolutionLabel || "";
+    let label = "";
+    if (providerName && detail && !detail.toLowerCase().startsWith(providerName.toLowerCase())) {
+      label = `${providerName} (${detail})`;
+    } else {
+      label = detail || providerName;
     }
-    const hasSignificantRange = cached.minElevationMeters != null
+    if (label && cached.fallbackFrom) {
+      const fromName = providerLabels[cached.fallbackFrom] || cached.fallbackFrom;
+      label += ` (fallback from ${fromName})`;
+    }
+    return label;
+  }
+
+  function hasRangeSpread(cached) {
+    return cached.minElevationMeters != null
       && cached.maxElevationMeters != null
       && (cached.maxElevationMeters - cached.minElevationMeters) >= SIGNIFICANT_RANGE_METERS;
-    if (hasSignificantRange) {
+  }
+
+  function buildTooltip(cached) {
+    const lines = [];
+    const sourceDesc = formatSourceDescription(cached);
+    if (sourceDesc) lines.push(`Source: ${sourceDesc}`);
+
+    if (cached.coordinateSource) {
+      const acc = cached.accuracyMeters != null
+        ? ` (±${formatNumber(cached.accuracyMeters)} m)`
+        : "";
+      lines.push(`Coordinates: ${cached.coordinateSource}${acc}`);
+    }
+
+    if (cached.state === "uncertain") {
+      if (cached.thresholdMeters) {
+        lines.push(`Hidden: uncertainty exceeds ${formatNumber(cached.thresholdMeters)} m threshold.`);
+      }
+    } else if (hasRangeSpread(cached)) {
+      lines.push(
+        `Point: ${formatElevation(cached.elevationMeters)} · Range: ${formatElevationRange(cached.minElevationMeters, cached.maxElevationMeters)}`
+      );
+    }
+
+    if (cached.approximate) {
+      lines.push("Approximate: iNaturalist obscured the observation's exact location.");
+    }
+
+    if (cached.state === "success") {
+      if (cached.elevationMeters < DEEP_OCEAN_THRESHOLD_METERS) {
+        lines.push("Ocean bathymetry (depth below sea level).");
+      } else if (
+        cached.elevationMeters === 0
+        && (cached.provider === "mapterhorn" || cached.provider === "open-meteo")
+      ) {
+        lines.push("Sea level or ocean surface (land-only DEM).");
+      }
+    }
+
+    return lines.join("\n");
+  }
+
+  function renderCachedResult(root, cached) {
+    const title = buildTooltip(cached);
+    const mapHref = macrostratUrl(cached.latitude, cached.longitude);
+    if (cached.state === "uncertain") {
+      setStatus(root, "uncertain", "uncertain", title, mapHref);
+      return;
+    }
+    if (hasRangeSpread(cached)) {
       const prefix = cached.approximate ? "≈ " : "";
       setStatus(
         root,
         "success",
         `${prefix}${formatElevationRange(cached.minElevationMeters, cached.maxElevationMeters)}`,
-        cached.title
+        title,
+        mapHref
       );
       return;
     }
     const prefix = cached.approximate || cached.uncertain ? "≈ " : "";
-    setStatus(
-      root,
-      "success",
-      `${prefix}${formatElevation(cached.elevationMeters)}`,
-      cached.title
-    );
+    const text = cached.elevationMeters < DEEP_OCEAN_THRESHOLD_METERS
+      ? `${prefix}Depth: ${formatElevation(Math.abs(cached.elevationMeters))}`
+      : `${prefix}${formatElevation(cached.elevationMeters)}`;
+    setStatus(root, "success", text, title, mapHref);
   }
 
-  function setStatus(root, state, text, title = "") {
+  function setStatus(root, state, text, title = "", mapHref = null) {
     const status = root.querySelector(".inat-elevation-status");
     const value = root.querySelector(".inat-elevation-value");
+    const mapLink = root.querySelector(".inat-elevation-map-link");
     status.dataset.state = state;
     value.textContent = text;
     status.title = title;
+    if (mapLink) {
+      if (mapHref) {
+        mapLink.href = mapHref;
+        mapLink.hidden = false;
+      } else {
+        mapLink.removeAttribute("href");
+        mapLink.hidden = true;
+      }
+    }
   }
 
   function isIdentifyPage() {
@@ -245,42 +322,35 @@
   }
 
   function buildHiddenEntry(coordinates, threshold) {
-    const privacyNote = coordinates.approximate
-      ? " Approximate: iNaturalist obscured the observation's exact location."
-      : "";
     return {
       state: "uncertain",
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      coordinateSource: coordinates.source,
+      accuracyMeters: coordinates.accuracyMeters,
+      thresholdMeters: threshold,
       approximate: coordinates.approximate,
-      uncertain: true,
-      title: [
-        `Coordinates: ${coordinates.source}.`,
-        `Hidden because uncertainty (±${Math.round(coordinates.accuracyMeters)} m) exceeds ${threshold} m threshold.`,
-        privacyNote
-      ].join(" ").trim()
+      uncertain: true
     };
   }
 
   function buildElevationEntry(coordinates, result, uncertain, mode, options = {}) {
-    const privacyNote = coordinates.approximate
-      ? " Approximate: iNaturalist obscured the observation's exact location."
-      : "";
-    const accuracyNote = coordinates.accuracyMeters != null
-      ? ` Location accuracy: ±${Math.round(coordinates.accuracyMeters)} m.`
-      : "";
-    const title = [
-      `Coordinates: ${coordinates.source}.`,
-      accuracyNote,
-      privacyNote
-    ].join(" ").trim();
     return {
       state: "success",
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      coordinateSource: coordinates.source,
+      accuracyMeters: coordinates.accuracyMeters,
+      provider: result.provider,
+      dataset: result.dataset,
+      resolutionLabel: result.resolutionLabel,
+      fallbackFrom: result.fallbackFrom,
       elevationMeters: result.elevationMeters,
       minElevationMeters: uncertain && mode === "range" ? result.minElevationMeters : undefined,
       maxElevationMeters: uncertain && mode === "range" ? result.maxElevationMeters : undefined,
       approximate: coordinates.approximate,
       uncertain,
-      needsRangeUpgrade: Boolean(options.needsRangeUpgrade),
-      title
+      needsRangeUpgrade: Boolean(options.needsRangeUpgrade)
     };
   }
 
@@ -437,6 +507,15 @@
     value.className = "inat-elevation-value";
     status.append(label, document.createTextNode(" "), value);
 
+    const mapLink = document.createElement("a");
+    mapLink.className = "inat-elevation-map-link";
+    mapLink.target = "_blank";
+    mapLink.rel = "noopener noreferrer";
+    mapLink.textContent = "↗";
+    mapLink.title = "Open location on Macrostrat";
+    mapLink.setAttribute("aria-label", "Open location on Macrostrat");
+    mapLink.hidden = true;
+
     const infoButton = document.createElement("button");
     infoButton.type = "button";
     infoButton.className = "inat-elevation-info";
@@ -451,7 +530,7 @@
       }
     });
 
-    root.append(status, infoButton);
+    root.append(status, mapLink, infoButton);
     return root;
   }
 

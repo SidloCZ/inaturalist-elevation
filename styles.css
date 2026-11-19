@@ -41,7 +41,9 @@
 }
 
 #inat-elevation-extension .inat-elevation-info,
-#inat-elevation-identify-extension .inat-elevation-info {
+#inat-elevation-identify-extension .inat-elevation-info,
+#inat-elevation-extension .inat-elevation-map-link,
+#inat-elevation-identify-extension .inat-elevation-map-link {
   appearance: none;
   background: transparent;
   border: 0;
@@ -54,13 +56,23 @@
   opacity: 0.55;
   padding: 2px;
   position: relative;
+  text-decoration: none;
   top: -1px;
+}
+
+#inat-elevation-extension .inat-elevation-map-link[hidden],
+#inat-elevation-identify-extension .inat-elevation-map-link[hidden] {
+  display: none;
 }
 
 #inat-elevation-extension .inat-elevation-info:hover,
 #inat-elevation-extension .inat-elevation-info:focus-visible,
 #inat-elevation-identify-extension .inat-elevation-info:hover,
-#inat-elevation-identify-extension .inat-elevation-info:focus-visible {
+#inat-elevation-identify-extension .inat-elevation-info:focus-visible,
+#inat-elevation-extension .inat-elevation-map-link:hover,
+#inat-elevation-extension .inat-elevation-map-link:focus-visible,
+#inat-elevation-identify-extension .inat-elevation-map-link:hover,
+#inat-elevation-identify-extension .inat-elevation-map-link:focus-visible {
   color: #4f7700;
   opacity: 1;
   outline: 1px solid #74ac00;
@@ -75,6 +87,10 @@
 #inat-elevation-identify-extension .inat-elevation-status {
   font-size: inherit;
   font-weight: 400;
+}
+
+#inat-elevation-identify-extension .inat-elevation-map-link {
+  margin-left: 4px;
 }
 
 #inat-elevation-identify-extension .inat-elevation-info {

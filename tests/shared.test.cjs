@@ -130,3 +130,11 @@ test("HTTP failures, malformed JSON, and stalled requests return errors", async 
   }));
   await assert.rejects(stalled.fetchJSON("https://example.test", {}, 5), /timed out/);
 });
+
+test("macrostratUrl formats valid coordinates and rejects invalid inputs", () => {
+  const { macrostratUrl, DEEP_OCEAN_THRESHOLD_METERS } = load();
+  assert.equal(DEEP_OCEAN_THRESHOLD_METERS, -450);
+  assert.equal(macrostratUrl(5.2468, -76.1001), "https://macrostrat.org/map/loc/-76.1001/5.2468#z=13");
+  assert.equal(macrostratUrl(95, 0), null);
+  assert.equal(macrostratUrl(null, 0), null);
+});
