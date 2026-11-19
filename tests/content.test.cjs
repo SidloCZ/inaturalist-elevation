@@ -404,3 +404,72 @@ test("uncertain coordinates show range, collapse flat terrain, mark approximate,
   flatApp.change({ accuracyThresholdMeters: { newValue: 0 } });
   await until(() => complete(flatApp.root()) && value(flatApp.root()) === "102 m");
 });
+
+test("Identify pages batch-prefetch intercepted results and upgrade uncertain observations on demand", async t => {
+  const app = setup(t, {
+    html: "<div></div>",
+    url: "https://www.inaturalist.org/observations/identify",
+    settings: { allowPrivateCoordinates: true, uncertaintyMode: "range", accuracyThresholdMeters: 100 },
+    handler: message => {
+      if (message.type === "getElevationBatch") {
+        const results = {};
+        for (const p of message.points) {
+          results[p.id] = { elevationMeters: Number(p.id) * 10 };
+        }
+        return { ok: true, results };
+      }
+      if (message.type === "getElevation") {
+        return { ok: true, elevationMeters: 200, minElevationMeters: 150, maxElevationMeters: 280 };
+      }
+      throw new Error(`Unexpected message: ${message.type}`);
+    }
+  });
+
+  app.window.dispatchEvent(new app.window.CustomEvent("inat-elevation:observations", {
+    detail: {
+      batch: true,
+      observations: [
+        { id: 10, authenticated: true, geojson: { type: "Point", coordinates: [1, 2] }, positional_accuracy: 15 },
+        { id: 20, authenticated: true, geojson: { type: "Point", coordinates: [3, 4] }, positional_accuracy: 400 },
+        {
+          id: 30,
+          authenticated: true,
+          obscured: true,
+          geojson: { type: "Point", coordinates: [5, 6] },
+          private_geojson: { type: "Point", coordinates: [5.1, 6.1] },
+          private_positional_accuracy: 5
+        }
+      ]
+    }
+  }));
+
+  await until(() => app.messages.some(m => m.type === "getElevationBatch"));
+  assert.equal(app.messages.filter(m => m.type === "getElevationBatch").length, 1);
+
+  // Opening obs 10 (accurate) reuses the prefetched result with zero extra messages.
+  app.document.body.innerHTML = modal(10);
+  await until(() => complete(app.identify()));
+  assert.equal(value(app.identify()), "100 m");
+  assert.equal(app.messages.filter(m => m.type === "getElevation").length, 0);
+
+  // Opening obs 20 (uncertain) upgrades to range lookup cleanly.
+  app.document.querySelector(".permalink").href = "/observations/20";
+  await until(() => app.identify()?.dataset.observationId === "20" && complete(app.identify()));
+  assert.equal(value(app.identify()), "150–280 m");
+  assert.equal(app.messages.filter(m => m.type === "getElevation").length, 1);
+
+  // Single observation page does not trigger getElevationBatch.
+  const obsPage = setup(t, {
+    html: PAGE,
+    url: "https://www.inaturalist.org/observations/10",
+    settings: { allowPrivateCoordinates: false }
+  });
+  obsPage.window.dispatchEvent(new obsPage.window.CustomEvent("inat-elevation:observations", {
+    detail: {
+      batch: true,
+      observations: [{ id: 10, geojson: { type: "Point", coordinates: [1, 2] } }]
+    }
+  }));
+  await until(() => complete(obsPage.root()));
+  assert.equal(obsPage.messages.some(m => m.type === "getElevationBatch"), false);
+});

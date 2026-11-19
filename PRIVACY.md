@@ -22,7 +22,7 @@ Automatic units use the browser's preferred locale and require no additional net
 
 ## When requests occur
 
-Lookups occur automatically for displayed observations, including when you move between observations in Identify. Cached results are reused within a page session; changing units does not require another request. Disable or remove the extension in `chrome://extensions` to stop future lookups.
+Lookups occur automatically for displayed observations, including when you move between observations in Identify. On Identify pages, observations in the displayed result batch may be pre-fetched together in one batch request. Cached results are reused within a page session; changing units does not require another request. Disable or remove the extension in `chrome://extensions` to stop future lookups.
 
 ## External services
 

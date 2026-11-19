@@ -114,3 +114,29 @@ test("background getElevation computes min/max range when sampleRadiusMeters is 
   assert.equal(res.minElevationMeters, 200);
   assert.equal(res.maxElevationMeters, 400);
 });
+
+test("background getElevationBatch resolves multiple valid observations in one provider call and rejects >100 items", async () => {
+  const app = setup(url => {
+    const locations = new URL(url).searchParams.get("locations").split("|");
+    return {
+      status: "OK",
+      results: locations.map((_, idx) => ({ dataset: "mapzen", elevation: 100 + idx * 50 }))
+    };
+  });
+  const res = await app.send({
+    type: "getElevationBatch",
+    source: "opentopodata",
+    points: [
+      { id: "101", latitude: 10, longitude: 20 },
+      { id: "bad", latitude: 10, longitude: 20 },
+      { id: "102", latitude: 11, longitude: 21 }
+    ]
+  });
+  assert.equal(app.requests.length, 1);
+  assert.equal(res.results["101"].elevationMeters, 100);
+  assert.equal(res.results["102"].elevationMeters, 150);
+  assert.equal(res.results.bad, undefined);
+
+  const tooMany = Array.from({ length: 101 }, (_, idx) => ({ id: String(idx + 1), latitude: 1, longitude: 1 }));
+  assert.equal((await app.send({ type: "getElevationBatch", points: tooMany })).ok, false);
+});
