@@ -4,29 +4,98 @@
   const ROOT_ID = "inat-elevation-extension";
   const IDENTIFY_ROOT_ID = "inat-elevation-identify-extension";
   const METERS_TO_FEET = 3.28084;
-  const { resolveElevationUnit, coordinatesFromObservation, fetchJSON } = iNaturalistElevation;
+  const {
+    VIEWER_OBSERVATION_FIELDS,
+    resolveElevationUnit,
+    coordinatesFromObservation,
+    fetchJSON
+  } = iNaturalistElevation;
   const MAX_CACHED_OBSERVATIONS = 200;
+  const MAX_INTERCEPTED_OBSERVATIONS = 300;
   let currentObservationId = null;
   let currentIdentifyObservationId = null;
   let injectionTimer = null;
   let settingsGeneration = 0;
   let preferredUnit = resolveElevationUnit("auto");
   let allowPrivateCoordinates = false;
+  let viewerApiToken = null;
+  let pendingTokenRequest = null;
   const resultCache = new Map();
   const pendingLookups = new Map();
+  const interceptedObservations = new Map();
   const rootLookups = new WeakMap();
+
+  function hasPrivateFields(observation) {
+    return Boolean(observation && (observation.private_geojson || observation.private_latitude != null));
+  }
+
+  function recordInterceptedObservation(observation) {
+    if (!observation || typeof observation !== "object" || observation.id == null) return;
+    const key = String(observation.id);
+    if (!/^[1-9]\d*$/.test(key)) return;
+    const existing = interceptedObservations.get(key);
+    const existingRich = Boolean(existing && (existing.authenticated || hasPrivateFields(existing)));
+    const nextRich = Boolean(observation.authenticated || hasPrivateFields(observation));
+    if (existing && existingRich && !nextRich) return;
+
+    if (interceptedObservations.has(key)) interceptedObservations.delete(key);
+    interceptedObservations.set(key, observation);
+    if (interceptedObservations.size > MAX_INTERCEPTED_OBSERVATIONS) {
+      interceptedObservations.delete(interceptedObservations.keys().next().value);
+    }
+  }
 
   function observationIdFromPath() {
     const match = window.location.pathname.match(/^\/observations\/(\d+)(?:\/|$)/);
     return match ? match[1] : null;
   }
 
-  async function fetchViewerCoordinates(observationId) {
-    const observation = await fetchJSON(`/observations/${observationId}.json`, {
+  async function getViewerApiToken() {
+    if (viewerApiToken) return viewerApiToken;
+    const metaToken = document.querySelector('meta[name="inaturalist-api-token"]')
+      ?.getAttribute("content")?.trim();
+    if (metaToken) {
+      viewerApiToken = metaToken;
+      return viewerApiToken;
+    }
+    if (pendingTokenRequest) return pendingTokenRequest;
+
+    pendingTokenRequest = fetchJSON("/users/api_token", {
       credentials: "same-origin",
       headers: { Accept: "application/json" }
+    }).then(data => {
+      const token = typeof data?.api_token === "string" ? data.api_token.trim() : "";
+      if (token) viewerApiToken = token;
+      return token || null;
+    }).finally(() => {
+      pendingTokenRequest = null;
     });
-    return coordinatesFromObservation(observation, true);
+
+    return pendingTokenRequest;
+  }
+
+  async function fetchViewerCoordinates(observationId) {
+    const token = await getViewerApiToken();
+    if (!token) return null;
+    try {
+      const data = await fetchJSON(
+        `https://api.inaturalist.org/v2/observations?id=${observationId}&fields=${VIEWER_OBSERVATION_FIELDS}`,
+        {
+          credentials: "omit",
+          referrerPolicy: "no-referrer",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const observation = data?.results?.[0];
+      if (observation) recordInterceptedObservation({ ...observation, authenticated: true });
+      return coordinatesFromObservation(observation, true);
+    } catch (error) {
+      if (error && /HTTP 40[13]\b/.test(error.message)) viewerApiToken = null;
+      throw error;
+    }
   }
 
   function sendMessage(message) {
@@ -48,6 +117,17 @@
   }
 
   async function resolveCoordinates(observationId, allowPrivate) {
+    const cachedObs = interceptedObservations.get(String(observationId));
+    if (cachedObs) {
+      if (!allowPrivate) {
+        const publicCoords = coordinatesFromObservation(cachedObs, false);
+        if (publicCoords) return publicCoords;
+      } else if (hasPrivateFields(cachedObs) || !cachedObs.obscured || cachedObs.authenticated) {
+        const coords = coordinatesFromObservation(cachedObs, true);
+        if (coords) return coords;
+      }
+    }
+
     if (allowPrivate) {
       try {
         const viewerCoordinates = await fetchViewerCoordinates(observationId);
@@ -333,6 +413,13 @@
 
     inject();
   }
+
+  window.addEventListener("inat-elevation:observations", event => {
+    const observations = event?.detail?.observations;
+    if (!Array.isArray(observations)) return;
+    for (const observation of observations) recordInterceptedObservation(observation);
+  });
+  window.dispatchEvent(new window.CustomEvent("inat-elevation:ready"));
 
   chrome.storage.sync.get({ elevationUnit: "auto", allowPrivateCoordinates: true }, settings => {
     if (!chrome.runtime.lastError) {

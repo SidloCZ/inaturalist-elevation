@@ -2,6 +2,11 @@
 
 // Shared by the content script, extension service worker, and options page.
 globalThis.iNaturalistElevation = (() => {
+  const PUBLIC_OBSERVATION_FIELDS =
+    "id,geojson,obscured,positional_accuracy,public_positional_accuracy,location,geoprivacy";
+  const VIEWER_OBSERVATION_FIELDS =
+    "id,geojson,private_geojson,obscured,positional_accuracy,public_positional_accuracy,private_positional_accuracy,location,geoprivacy";
+
   function resolveElevationUnit(preference, locale = globalThis.navigator?.language) {
     if (preference === "feet" || preference === "meters") return preference;
     try {
@@ -17,6 +22,11 @@ globalThis.iNaturalistElevation = (() => {
     return Number(value);
   }
 
+  function positiveNumber(value) {
+    const number = coordinateNumber(value);
+    return Number.isFinite(number) && number > 0 ? number : null;
+  }
+
   function normalizeCoordinates(latitude, longitude, options = {}) {
     const lat = coordinateNumber(latitude);
     const lon = coordinateNumber(longitude);
@@ -26,6 +36,7 @@ globalThis.iNaturalistElevation = (() => {
       latitude: lat,
       longitude: lon,
       approximate: Boolean(options.approximate),
+      accuracyMeters: positiveNumber(options.accuracyMeters),
       source: options.source || "iNaturalist public coordinates"
     };
   }
@@ -38,13 +49,21 @@ globalThis.iNaturalistElevation = (() => {
   function coordinatesFromObservation(observation, allowPrivate = false) {
     if (!observation || typeof observation !== "object") return null;
     if (allowPrivate) {
-      const options = { source: "exact coordinates visible to your iNaturalist account" };
+      const options = {
+        source: "exact coordinates visible to your iNaturalist account",
+        accuracyMeters: positiveNumber(observation.private_positional_accuracy)
+          ?? positiveNumber(observation.positional_accuracy)
+      };
       const privateCoordinates = fromGeoJSON(observation.private_geojson, options)
         || normalizeCoordinates(observation.private_latitude, observation.private_longitude, options);
       if (privateCoordinates) return privateCoordinates;
     }
 
-    const options = { approximate: observation.obscured === true };
+    const options = {
+      approximate: observation.obscured === true,
+      accuracyMeters: positiveNumber(observation.public_positional_accuracy)
+        ?? positiveNumber(observation.positional_accuracy)
+    };
     const publicCoordinates = fromGeoJSON(observation.geojson, options)
       || normalizeCoordinates(observation.latitude, observation.longitude, options);
     if (publicCoordinates) return publicCoordinates;
@@ -68,5 +87,13 @@ globalThis.iNaturalistElevation = (() => {
     }
   }
 
-  return Object.freeze({ resolveElevationUnit, normalizeCoordinates, coordinatesFromObservation, fetchJSON });
+  return Object.freeze({
+    PUBLIC_OBSERVATION_FIELDS,
+    VIEWER_OBSERVATION_FIELDS,
+    resolveElevationUnit,
+    positiveNumber,
+    normalizeCoordinates,
+    coordinatesFromObservation,
+    fetchJSON
+  });
 })();

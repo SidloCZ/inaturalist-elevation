@@ -152,35 +152,54 @@ test("normal page and modal lookups finish independently, with shared requests f
 
 test("hiding exact coordinates prevents a pending account lookup from being sent externally", async t => {
   const slow = deferred();
-  const app = setup(t, { settings: { allowPrivateCoordinates: true }, fetch: () => slow.promise });
-  assert.equal(app.fetches.length, 1);
+  const app = setup(t, {
+    settings: { allowPrivateCoordinates: true },
+    fetch: url => String(url) === "/users/api_token"
+      ? Promise.resolve({ ok: true, json: async () => ({ api_token: "test-jwt" }) })
+      : slow.promise
+  });
+  await until(() => app.fetches.length === 2);
   app.change({ allowPrivateCoordinates: { newValue: false } });
   await until(() => complete(app.root()));
-  slow.resolve({ ok: true, json: async () => ({ private_latitude: 7, private_longitude: 8 }) });
+  slow.resolve({ ok: true, json: async () => ({ results: [{ private_latitude: 7, private_longitude: 8 }] }) });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(value(app.root()), "≈ 123 m");
   assert.equal(app.messages.filter(message => message.type === "getElevation").length, 1);
   assert.equal(app.messages.find(message => message.type === "getElevation").latitude, 123);
 });
 
+function viewerFetch(observation = { private_latitude: 7, private_longitude: 8 }) {
+  return async url => {
+    if (String(url) === "/users/api_token") {
+      return { ok: true, json: async () => ({ api_token: "test-jwt" }) };
+    }
+    if (String(url).startsWith("https://api.inaturalist.org/v2/observations")) {
+      return { ok: true, json: async () => ({ results: [observation] }) };
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+}
+
 test("unhiding uses account-visible coordinates, and hiding again clears cached exact results", async t => {
   const app = setup(t, {
     settings: { allowPrivateCoordinates: false },
-    fetch: async () => ({ ok: true, json: async () => ({ private_latitude: 7, private_longitude: 8 }) })
+    fetch: viewerFetch()
   });
   await until(() => complete(app.root()));
   app.change({ allowPrivateCoordinates: { newValue: true } });
   await until(() => complete(app.root()) && value(app.root()) === "7 m");
+  assert.equal(app.fetches[0][0], "/users/api_token");
   assert.equal(app.fetches[0][1].credentials, "same-origin");
+  assert.match(app.fetches[1][0], /^https:\/\/api\.inaturalist\.org\/v2\/observations\?id=123&fields=/);
+  assert.equal(app.fetches[1][1].credentials, "omit");
+  assert.equal(app.fetches[1][1].headers.Authorization, "Bearer test-jwt");
   app.change({ allowPrivateCoordinates: { newValue: false } });
   await until(() => complete(app.root()) && value(app.root()) === "≈ 123 m");
   assert.equal(app.messages.filter(message => message.type === "getElevation").length, 3);
 });
 
 test("new installs use account-visible exact coordinates by default and preference removal restores that default", async t => {
-  const app = setup(t, {
-    fetch: async () => ({ ok: true, json: async () => ({ private_latitude: 7, private_longitude: 8 }) })
-  });
+  const app = setup(t, { fetch: viewerFetch() });
   await until(() => complete(app.root()));
   assert.equal(value(app.root()), "7 m");
   assert.equal(app.messages.some(message => message.type === "getPublicObservationCoordinates"), false);
@@ -225,7 +244,7 @@ test("account lookup stays relative to the regional site and falls back to publi
     fetch: async () => ({ ok: false, status: 401 })
   });
   await until(() => complete(app.root()));
-  assert.equal(app.fetches[0][0], "/observations/123.json");
+  assert.equal(app.fetches[0][0], "/users/api_token");
   assert.equal(app.fetches[0][1].credentials, "same-origin");
   assert.equal(value(app.root()), "≈ 123 m");
 });
@@ -274,4 +293,52 @@ test("elevation numbers format using navigator.language independently of host OS
   await until(() => complete(enApp.root()) && complete(deApp.root()));
   assert.equal(value(enApp.root()), "1,907 m");
   assert.equal(value(deApp.root()), "1.907 m");
+});
+
+test("intercepted API payload resolves observation coordinates with zero extra iNaturalist requests", async t => {
+  const app = setup(t, {
+    html: '<div class="Map"></div>',
+    settings: { allowPrivateCoordinates: true }
+  });
+  app.window.dispatchEvent(new app.window.CustomEvent("inat-elevation:observations", {
+    detail: {
+      batch: false,
+      observations: [{
+        id: 123,
+        authenticated: true,
+        obscured: true,
+        geojson: { type: "Point", coordinates: [0, 10] },
+        private_geojson: { type: "Point", coordinates: [-76, 42] }
+      }]
+    }
+  }));
+  app.document.querySelector(".Map").innerHTML = '<div class="map_details"><span class="place-guess">Loc</span></div>';
+  await until(() => complete(app.root()));
+  assert.equal(value(app.root()), "42 m");
+  assert.equal(app.fetches.length, 0);
+  assert.equal(app.messages.some(message => message.type === "getPublicObservationCoordinates"), false);
+});
+
+test("intercepted private coordinates are ignored when allowPrivateCoordinates is false", async t => {
+  const app = setup(t, {
+    html: '<div class="Map"></div>',
+    settings: { allowPrivateCoordinates: false }
+  });
+  app.window.dispatchEvent(new app.window.CustomEvent("inat-elevation:observations", {
+    detail: {
+      batch: false,
+      observations: [{
+        id: 123,
+        authenticated: true,
+        obscured: true,
+        geojson: { type: "Point", coordinates: [0, 10] },
+        private_geojson: { type: "Point", coordinates: [-76, 42] }
+      }]
+    }
+  }));
+  app.document.querySelector(".Map").innerHTML = '<div class="map_details"><span class="place-guess">Loc</span></div>';
+  await until(() => complete(app.root()));
+  assert.equal(value(app.root()), "≈ 10 m");
+  assert.equal(app.fetches.length, 0);
+  assert.equal(app.messages.some(message => message.type === "getPublicObservationCoordinates"), false);
 });

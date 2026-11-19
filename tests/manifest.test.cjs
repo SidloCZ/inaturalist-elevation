@@ -42,8 +42,15 @@ test("manifest, package version, entry points, and declared PNG dimensions agree
   assert.ok(manifest.description.length <= 132);
   assert.deepEqual(manifest.permissions, ["storage"]);
   const entries = [manifest.background.service_worker, manifest.options_ui.page,
-    ...manifest.content_scripts.flatMap(script => [...script.js, ...script.css])];
+    ...manifest.content_scripts.flatMap(script => [...script.js, ...(script.css || [])])];
   for (const name of entries) assert.ok(existsSync(join(root, name)), name);
+  const mainWorldScript = manifest.content_scripts.find(script => script.world === "MAIN");
+  assert.ok(mainWorldScript);
+  assert.deepEqual(mainWorldScript.js, ["page-interceptor.js"]);
+  assert.equal(mainWorldScript.run_at, "document_start");
+  for (const site of network.sites) {
+    assert.ok(mainWorldScript.matches.some(pattern => matches(pattern, `${site.url}/observations/1`)), site.url);
+  }
   for (const [size, name] of Object.entries(manifest.icons)) {
     const bytes = readFileSync(join(root, name));
     assert.equal(bytes.subarray(1, 4).toString(), "PNG");

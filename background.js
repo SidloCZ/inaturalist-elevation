@@ -1,7 +1,12 @@
 "use strict";
 
 importScripts("shared.js");
-const { normalizeCoordinates, coordinatesFromObservation, fetchJSON } = iNaturalistElevation;
+const {
+  PUBLIC_OBSERVATION_FIELDS,
+  normalizeCoordinates,
+  coordinatesFromObservation,
+  fetchJSON
+} = iNaturalistElevation;
 const REQUEST_OPTIONS = {
   credentials: "omit",
   referrerPolicy: "no-referrer",
@@ -28,7 +33,7 @@ async function fetchPublicObservationCoordinates(observationId) {
     throw new Error("This does not look like an iNaturalist observation.");
   }
   const data = await fetchJSON(
-    `https://api.inaturalist.org/v1/observations/${observationId}`,
+    `https://api.inaturalist.org/v2/observations?id=${observationId}&fields=${PUBLIC_OBSERVATION_FIELDS}`,
     REQUEST_OPTIONS
   );
   const coordinates = coordinatesFromObservation(data?.results?.[0]);

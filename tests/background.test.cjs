@@ -37,6 +37,7 @@ test("background retrieves obscured public coordinates and numeric elevation wit
     assert.equal(request.options.credentials, "omit");
     assert.equal(request.options.referrerPolicy, "no-referrer");
   }
+  assert.match(app.requests[0].url, /^https:\/\/api\.inaturalist\.org\/v2\/observations\?id=123&fields=/);
   assert.match(app.requests[1].url, /latitude=5&longitude=-70/);
 });
 

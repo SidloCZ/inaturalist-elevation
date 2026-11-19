@@ -4,9 +4,11 @@ Updated November 10, 2026. Applies to iNaturalist Elevation 1.7.0.
 
 ## Data used
 
-For an observation page or an observation opened in Identify, the extension sends latitude and longitude to Open-Meteo to retrieve terrain elevation. On a new installation, the extension uses exact coordinates visible to your iNaturalist account when available, including coordinates for observations with obscured/private geoprivacy. It requests the observation's JSON from the current iNaturalist site using your existing signed-in session. Authentication cookies are used only by this same-origin iNaturalist request and are never sent to Open-Meteo or the developer.
+For an observation page or an observation opened in Identify, the extension sends latitude and longitude to Open-Meteo to retrieve terrain elevation. Whenever possible, it reuses coordinates already loaded by the iNaturalist page from iNaturalist's API without making extra iNaturalist requests.
 
-To use public coordinates only, check **Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy** in Extension options. When checked, the extension sends the observation ID to the public iNaturalist API and sends only the returned public coordinates to Open-Meteo. The public API is also used when the account-specific coordinates cannot be retrieved. Obscured public coordinates may be shifted away from the true location; the result is marked `≈`. Observations with no available coordinates show “unavailable.”
+On a new installation, the extension uses exact coordinates visible to your iNaturalist account when available, including coordinates for observations with obscured/private geoprivacy. If account-visible coordinates were not already loaded by the page, it requests a short-lived API token from the current iNaturalist site (`/users/api_token`) using your signed-in session and queries iNaturalist API v2 with minimal coordinate fields. Authentication cookies are used only by the same-origin token request and are never sent to Open-Meteo or the developer.
+
+To use public coordinates only, check **Hide exact coordinates from Open-Meteo for observations with obscured/private geoprivacy** in Extension options. When checked, any private coordinates are ignored and fallback lookups use only the public iNaturalist API v2. Obscured public coordinates may be shifted away from the true location; the result is marked `≈`. Observations with no available coordinates show “unavailable.”
 
 The checkbox is unchecked by default on new installations. Existing saved preferences are preserved when updating. You can change this preference at any time; requests already sent cannot be recalled.
 

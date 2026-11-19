@@ -46,13 +46,22 @@ test("public coordinates and obscured flag are preserved unless exact coordinate
   const { coordinatesFromObservation } = load();
   const observation = {
     obscured: true,
+    positional_accuracy: 42,
+    public_positional_accuracy: 1500,
+    private_positional_accuracy: 8,
     geojson: { type: "Point", coordinates: [20, 10] },
     private_geojson: { type: "Point", coordinates: [21, 11] }
   };
   assert.equal(coordinatesFromObservation(observation).latitude, 10);
   assert.equal(coordinatesFromObservation(observation).approximate, true);
+  assert.equal(coordinatesFromObservation(observation).accuracyMeters, 1500);
   assert.equal(coordinatesFromObservation(observation, true).latitude, 11);
   assert.equal(coordinatesFromObservation(observation, true).approximate, false);
+  assert.equal(coordinatesFromObservation(observation, true).accuracyMeters, 8);
+  assert.equal(coordinatesFromObservation({
+    geojson: { type: "Point", coordinates: [20, 10] },
+    positional_accuracy: 0
+  }).accuracyMeters, null);
   assert.equal(coordinatesFromObservation({ private_latitude: 1, private_longitude: 2 }), null);
 });
 
